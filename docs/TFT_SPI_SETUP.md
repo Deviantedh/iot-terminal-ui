@@ -14,7 +14,7 @@ This project now uses a project-local `TFT_eSPI` configuration.
 ## Current pinned values
 
 - `#define ST7789_DRIVER`
-- `#define SPI_FREQUENCY 80000000`
+- `#define SPI_FREQUENCY 40000000`
 - `#define SPI_TOUCH_FREQUENCY 2500000`
 
 ## Quick verification commands
@@ -26,14 +26,16 @@ Run from project root:
 arduino-cli compile --fqbn esp8266:esp8266:nodemcuv2 --verbose .
 ```
 
-At runtime (Serial on boot), the sketch also prints:
+If `APP_SERIAL_LOGGING_ENABLED` is temporarily enabled, the sketch also prints on boot:
 - `TFT USER_SETUP_ID`
 - `TFT SPI_FREQUENCY`
 - `TFT SPI_TOUCH_FREQUENCY`
 
 ## Current working setup
 
-This project currently uses `80000000` as the working display SPI clock.
+This project currently uses `40000000` as the stable display SPI clock.
+The previous `80000000` setting caused visible display artifacts on real hardware:
+bottom-row stripes and a white rectangular corruption in the top title bar area.
 If you need to retest this on different hardware, change only `SPI_FREQUENCY`
 in `iot_terminal_ui.ino.globals.h`, rebuild, and verify the display and touch
 behavior on the real device.

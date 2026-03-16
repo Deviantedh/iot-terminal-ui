@@ -1,5 +1,6 @@
 #include <Arduino.h>
 #include "DisplayHAL.h"
+#include "Pcf8574Buttons.h"
 #include "SimpleUI.h"
 #include "AppScreens.h"
 
@@ -15,16 +16,27 @@
 #define APP_DEBUG_MODE_DEFAULT 0
 #endif
 
+#ifndef APP_SERIAL_LOGGING_ENABLED
+#define APP_SERIAL_LOGGING_ENABLED 0
+#endif
+
 #define TOUCH_CS  D2
 #define TOUCH_IRQ D1
 // Set a PWM-capable GPIO here if the TFT backlight transistor is wired to a controllable pin.
 #define BACKLIGHT_PIN -1
+#define PCF8574_ADDR 0x20
+#define PCF8574_SDA_PIN 3
+#define PCF8574_SCL_PIN 1
 
 DisplayHAL displayHal(TOUCH_CS, TOUCH_IRQ, BACKLIGHT_PIN);
+Pcf8574Buttons buttons(PCF8574_ADDR, PCF8574_SDA_PIN, PCF8574_SCL_PIN);
 AppState app;
 SimpleUI* ui = nullptr;
+bool buttonsReady = false;
+unsigned long lastButtonsPollMs = 0;
 
 void setup() {
+#if APP_SERIAL_LOGGING_ENABLED
   Serial.begin(115200);
   Serial.println();
   Serial.println("Boot iot_terminal_ui");
@@ -42,10 +54,16 @@ void setup() {
 #endif
   Serial.print("Backlight control: ");
   Serial.println(displayHal.backlightControlSupported() ? "GPIO PWM" : "not wired (stub only)");
+#endif
 
   displayHal.begin();
+  buttonsReady = buttons.begin();
   initAppState(app);
   appSetDebugMode(app, APP_DEBUG_MODE_DEFAULT != 0);
+#if APP_SERIAL_LOGGING_ENABLED
+  Serial.print("PCF8574 buttons: ");
+  Serial.println(buttonsReady ? "ready" : "not detected");
+#endif
 
   static SimpleUI uiInstance(displayHal.getTft());
   ui = &uiInstance;
@@ -54,21 +72,46 @@ void setup() {
 }
 
 void loop() {
+  const unsigned long nowMs = millis();
+  const unsigned long buttonsPollIntervalMs = appIsSleeping(app) ? 60 : (appIsIdleMode(app) ? 40 : 20);
+
+  if (buttonsReady && (long)(nowMs - lastButtonsPollMs) >= (long)buttonsPollIntervalMs) {
+    lastButtonsPollMs = nowMs;
+    const uint8_t buttonEvents = buttons.poll();
+    if (buttonEvents & PCF8574_BUTTON_EVENT_MENU) {
+      appPostEvent(app, APP_EVENT_BUTTON_MENU, 0, "MENU");
+    }
+    if (buttonEvents & PCF8574_BUTTON_EVENT_POWER_SHORT) {
+      appPostEvent(app, APP_EVENT_BUTTON_POWER_SHORT, 0, "POWER SHORT");
+    }
+    if (buttonEvents & PCF8574_BUTTON_EVENT_POWER_LONG) {
+      appPostEvent(app, APP_EVENT_BUTTON_POWER_LONG, 0, "POWER LONG");
+    }
+  }
+
   int tx, ty;
   bool touching = displayHal.readTouch(tx, ty);
   updateTouchState(app, touching, tx, ty);
 
-  if (displayHal.getTap(tx, ty)) {
+  if (!appIsSleeping(app) && displayHal.getTap(tx, ty)) {
+#if APP_SERIAL_LOGGING_ENABLED
     Serial.print("Tap: ");
     Serial.print(tx);
     Serial.print(", ");
     Serial.println(ty);
+#endif
     handleAppTouch(*ui, app, tx, ty);
   }
 
   processUiUpdates(displayHal.getTft(), *ui, app);
 
-  displayHal.setBacklightLevel(appIsIdleMode(app) ? BACKLIGHT_DIM : BACKLIGHT_NORMAL);
+  if (appIsSleeping(app)) {
+    displayHal.setBacklightLevel(BACKLIGHT_OFF);
+  } else if (appIsIdleMode(app)) {
+    displayHal.setBacklightLevel(BACKLIGHT_DIM);
+  } else {
+    displayHal.setBacklightLevel(BACKLIGHT_NORMAL);
+  }
 
   delay(appLoopDelayMs(app));
 }

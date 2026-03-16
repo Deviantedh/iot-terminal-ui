@@ -5,10 +5,13 @@
 #include "SimpleUI.h"
 
 enum ScreenState {
+  SCREEN_HOME,
   SCREEN_MENU,
   SCREEN_GAME,
   SCREEN_BALANCE,
-  SCREEN_SETTINGS
+  SCREEN_SETTINGS,
+  SCREEN_PROFILE,
+  SCREEN_TOPUP
 };
 
 enum SettingsViewState : uint8_t {
@@ -19,18 +22,24 @@ enum SettingsViewState : uint8_t {
 
 enum ButtonAnimTarget {
   BTN_ANIM_NONE = 0,
-  BTN_ANIM_MENU_START,
-  BTN_ANIM_MENU_BALANCE,
+  BTN_ANIM_HOME_PLAY,
+  BTN_ANIM_HOME_MENU,
+  BTN_ANIM_MENU_PROFILE,
+  BTN_ANIM_MENU_TOPUP,
   BTN_ANIM_MENU_SETTINGS,
+  BTN_ANIM_MENU_HOME,
   BTN_ANIM_BACK
 };
 
 enum PendingAction {
   ACTION_NONE = 0,
+  ACTION_GOTO_HOME,
   ACTION_GOTO_MENU,
   ACTION_GOTO_GAME,
   ACTION_GOTO_BALANCE,
-  ACTION_GOTO_SETTINGS
+  ACTION_GOTO_SETTINGS,
+  ACTION_GOTO_PROFILE,
+  ACTION_GOTO_TOPUP
 };
 
 enum DirtyRegion : uint16_t {
@@ -45,7 +54,8 @@ enum DirtyRegion : uint16_t {
   DIRTY_WIFI_BADGE         = 1 << 7,
   DIRTY_WIFI_ACTION_BUTTON = 1 << 8,
   DIRTY_NETWORK_PAGE_LABEL = 1 << 9,
-  DIRTY_UI_OVERLAY         = 1 << 10
+  DIRTY_UI_OVERLAY         = 1 << 10,
+  DIRTY_HOME_TIME          = 1 << 11
 };
 
 enum KeyboardInputTarget : uint8_t {
@@ -80,11 +90,20 @@ enum AppEventType : uint8_t {
   APP_EVENT_NONE = 0,
   APP_EVENT_WIFI_CONNECTED,
   APP_EVENT_WIFI_DISCONNECTED,
+  APP_EVENT_BUTTON_MENU,
+  APP_EVENT_BUTTON_POWER_SHORT,
+  APP_EVENT_BUTTON_POWER_LONG,
   APP_EVENT_BALANCE_UPDATED,
   APP_EVENT_EXTERNAL_MESSAGE,
   APP_EVENT_SHOW_NOTIFICATION,
   APP_EVENT_SHOW_ERROR,
   APP_EVENT_GAME_STATE_CHANGED
+};
+
+enum PowerMode : uint8_t {
+  POWER_MODE_NORMAL = 0,
+  POWER_MODE_SLEEP,
+  POWER_MODE_STANDBY
 };
 
 struct AppEvent {
@@ -153,6 +172,9 @@ struct AppState {
   uint16_t lastDrawnWifiActionColor;
   uint8_t lastDrawnNetworkPage;
   bool networkListCacheValid;
+  int lastDrawnGameBalanceValue;
+  char lastDrawnHomeTime[6];
+  bool homeCacheValid;
 
   // Lightweight global UI feedback for future game/server integration.
   bool uiStatusVisible;
@@ -175,6 +197,8 @@ struct AppState {
   uint32_t idleLoopCount;
   bool idleMode;
   unsigned long idleSinceMs;
+  PowerMode powerMode;
+  ScreenState balanceReturnScreen;
 
   bool gameCacheValid;
 };
@@ -214,6 +238,8 @@ bool appConsumeEvent(AppState& app, AppEvent& out);
 void appSetDebugMode(AppState& app, bool enabled);
 bool appIsDebugMode(const AppState& app);
 bool appIsIdleMode(const AppState& app);
+bool appIsSoftStandby(const AppState& app);
+bool appIsSleeping(const AppState& app);
 uint8_t appLoopDelayMs(const AppState& app);
 
 #endif

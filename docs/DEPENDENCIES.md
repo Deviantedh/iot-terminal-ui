@@ -16,7 +16,7 @@
 ## What to localize inside project (recommended)
 
 - Local app modules and adapters only:
-  - `DisplayHAL`, `SimpleUI`, `AppScreens`, `OnScreenKeyboard`, `WiFiService`
+  - `DisplayHAL`, `SimpleUI`, `AppScreens`, `OnScreenKeyboard`, `WiFiService`, `TimeService`, `Pcf8574Buttons`
 - Project-local display config:
   - `iot_terminal_ui.ino.globals.h`
 - Project scripts/docs for reproducibility:
@@ -36,6 +36,7 @@
 ```
 
 3. Confirm project-local TFT setup and SPI frequency.
+   Current stable display SPI clock is `40000000`.
 4. Review deployment-specific Wi-Fi built-ins in `WiFiProfiles.cpp`.
 5. Build/upload with the same board core version and external library versions.
 
@@ -49,3 +50,10 @@
   - Cons: still depends on installed library versions.
 
 For this project, external libraries + strict version notes is the best balance.
+
+## Board-specific wiring notes
+
+- Touch uses `D2` for `TOUCH_CS` and `D1` for `TOUCH_IRQ`.
+- `PCF8574` buttons use `GPIO3` (`SDA`) and `GPIO1` (`SCL`) at address `0x20`.
+- With that wiring, UART pins are repurposed for I2C, so serial logging is disabled by default.
+- If Serial Monitor is opened anyway, I2C traffic on `GPIO1/GPIO3` appears as garbage characters in the terminal.
