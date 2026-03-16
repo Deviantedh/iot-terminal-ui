@@ -1,0 +1,113 @@
+# iot_terminal_ui
+
+UI platform for `ESP8266 NodeMCU v3 + ST7789 320x240 + XPT2046 touch`.
+
+The project is organized as a responsive modular Arduino UI with:
+
+- partial redraw / dirty regions
+- profiling through `Serial`
+- on-screen keyboard
+- Wi-Fi scan / select / connect flow
+- persistent Wi-Fi credentials in `LittleFS`
+
+The current goal of the codebase is to stay stable and portable as a base for
+later game integration and server-side logic.
+
+## Module layout
+
+- `DisplayHAL`
+  - display and touch hardware access
+- `SimpleUI`
+  - reusable UI primitives and lightweight control drawing
+- `AppScreens`
+  - app state, screen routing, redraw policy, profiling, Wi-Fi UX flow
+- `OnScreenKeyboard`
+  - touch keyboard for SSID/password entry
+- `WiFiService`
+  - non-blocking Wi-Fi scan/connect polling state machine
+- `WiFiProfiles`
+  - saved credentials in `LittleFS` and built-in fallback networks
+- `iot_terminal_ui.ino`
+  - entry point, setup, main loop
+
+## Build summary
+
+Main build instructions are in `docs/BUILD.md`.
+
+Short version:
+
+- board: `ESP8266 NodeMCU v3`
+- `arduino-cli` FQBN: `esp8266:esp8266:nodemcuv2`
+- CPU frequency: `80 MHz`
+- current TFT SPI clock: `80000000`
+
+Required libraries:
+
+- `ESP8266 core for Arduino` `3.1.2`
+- `TFT_eSPI` `2.5.43`
+- `XPT2046_Touchscreen` `1.4`
+
+Generated local artifacts such as `build/` are not part of the source contract.
+
+## Where TFT setup is defined
+
+The active `TFT_eSPI` setup is project-local:
+
+- `iot_terminal_ui.ino.globals.h`
+
+This file is injected by the ESP8266 core into all translation units, so the
+project does not require editing global `TFT_eSPI` library config files.
+
+## Flashing
+
+Arduino IDE:
+
+1. Install the required board package and libraries.
+2. Open `iot_terminal_ui.ino`.
+3. Select `NodeMCU 1.0 (ESP-12E Module)`.
+4. Keep CPU frequency at `80 MHz`.
+5. Build and upload.
+
+`arduino-cli`:
+
+```bash
+arduino-cli compile --fqbn esp8266:esp8266:nodemcuv2 .
+arduino-cli upload --fqbn esp8266:esp8266:nodemcuv2 -p <serial-port> .
+```
+
+## Serial diagnostics
+
+Open Serial Monitor at `115200`.
+
+On boot the firmware prints:
+
+- boot banner
+- active TFT setup id
+- `SPI_FREQUENCY`
+- `SPI_TOUCH_FREQUENCY`
+
+During runtime it also prints:
+
+- tap coordinates
+- UI profiling statistics
+- Wi-Fi field update debug lines
+
+This is the main way to verify redraw behavior, touch flow, and integration work
+before new gameplay or server logic is added.
+
+## Portability notes
+
+- The project expects project-local TFT setup from `iot_terminal_ui.ino.globals.h`.
+- `iot_terminal_ui.ino` contains compile-time guards that fail the build if that setup is not injected.
+- `tools/print_project_dependencies.sh` supports autodetection and optional overrides through `ARDUINO_LIBRARIES_DIR` and `ARDUINO_DATA_DIR`.
+- Review built-in Wi-Fi fallback entries in `WiFiProfiles.cpp` before handing the project to another participant.
+
+## Notes for the next integration stage
+
+- `AppState` is the central application/UI state container.
+- `WiFiService` owns non-blocking Wi-Fi transport state.
+- `WiFiProfiles` owns persisted credentials and fallback network definitions.
+- Future game logic should plug into `AppScreens` update/draw flow without
+  changing the existing redraw contract.
+- Future server logic should be attached as a separate service module and
+  surfaced into `AppState`, not mixed directly into drawing code.
