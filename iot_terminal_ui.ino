@@ -1,4 +1,5 @@
 #include <Arduino.h>
+#include "BuzzerService.h"
 #include "DisplayHAL.h"
 #include "Pcf8574Buttons.h"
 #include "SimpleUI.h"
@@ -24,11 +25,13 @@
 #define TOUCH_IRQ D1
 // Set a PWM-capable GPIO here if the TFT backlight transistor is wired to a controllable pin.
 #define BACKLIGHT_PIN -1
+#define BUZZER_PIN D0
 #define PCF8574_ADDR 0x20
 #define PCF8574_SDA_PIN 3
 #define PCF8574_SCL_PIN 1
 
 DisplayHAL displayHal(TOUCH_CS, TOUCH_IRQ, BACKLIGHT_PIN);
+BuzzerService buzzer(BUZZER_PIN);
 Pcf8574Buttons buttons(PCF8574_ADDR, PCF8574_SDA_PIN, PCF8574_SCL_PIN);
 AppState app;
 SimpleUI* ui = nullptr;
@@ -57,6 +60,7 @@ void setup() {
 #endif
 
   displayHal.begin();
+  buzzer.begin();
   buttonsReady = buttons.begin();
   initAppState(app);
   appSetDebugMode(app, APP_DEBUG_MODE_DEFAULT != 0);
@@ -74,11 +78,20 @@ void setup() {
 void loop() {
   const unsigned long nowMs = millis();
   const unsigned long buttonsPollIntervalMs = appIsSleeping(app) ? 60 : (appIsIdleMode(app) ? 40 : 20);
+  const PowerMode previousPowerMode = app.powerMode;
+  const WifiFlowState previousWifiFlowState = app.wifiFlowState;
+  buzzer.setEnabled(app.soundEnabled);
 
   if (buttonsReady && (long)(nowMs - lastButtonsPollMs) >= (long)buttonsPollIntervalMs) {
     lastButtonsPollMs = nowMs;
     const uint8_t buttonEvents = buttons.poll();
+    const bool wakeRequested = appIsSleeping(app) &&
+      (buttonEvents & (PCF8574_BUTTON_EVENT_POWER_SHORT | PCF8574_BUTTON_EVENT_POWER_LONG));
+    if (wakeRequested && displayHal.displayIsSleeping()) {
+      displayHal.displaySleepOff();
+    }
     if (buttonEvents & PCF8574_BUTTON_EVENT_MENU) {
+      buzzer.playClick();
       appPostEvent(app, APP_EVENT_BUTTON_MENU, 0, "MENU");
     }
     if (buttonEvents & PCF8574_BUTTON_EVENT_POWER_SHORT) {
@@ -104,6 +117,29 @@ void loop() {
   }
 
   processUiUpdates(displayHal.getTft(), *ui, app);
+  buzzer.setEnabled(app.soundEnabled);
+
+  if (appIsSleeping(app)) {
+    if (!displayHal.displayIsSleeping()) {
+      displayHal.displaySleepOn();
+    }
+  } else if (displayHal.displayIsSleeping()) {
+    displayHal.displaySleepOff();
+    app.fullRedrawRequested = true;
+  }
+
+  if (previousPowerMode != app.powerMode) {
+    if (app.powerMode == POWER_MODE_NORMAL) {
+      buzzer.playWake();
+    } else {
+      buzzer.playSleep();
+    }
+  }
+
+  if (previousWifiFlowState != app.wifiFlowState &&
+      app.wifiFlowState == WIFI_FLOW_ERROR) {
+    buzzer.playError();
+  }
 
   if (appIsSleeping(app)) {
     displayHal.setBacklightLevel(BACKLIGHT_OFF);
@@ -113,5 +149,6 @@ void loop() {
     displayHal.setBacklightLevel(BACKLIGHT_NORMAL);
   }
 
+  buzzer.tick();
   delay(appLoopDelayMs(app));
 }

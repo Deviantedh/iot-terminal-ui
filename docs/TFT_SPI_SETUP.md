@@ -40,4 +40,11 @@ If you need to retest this on different hardware, change only `SPI_FREQUENCY`
 in `iot_terminal_ui.ino.globals.h`, rebuild, and verify the display and touch
 behavior on the real device.
 
+Sleep behavior now also uses ST7789 controller commands through `DisplayHAL`:
+
+- `Display OFF` + `Sleep In` when entering sleep/standby
+- `Sleep Out` + `Display ON` when waking
+
+This avoids relying on `fillScreen(TFT_BLACK)` alone for screen-off behavior.
+
 This change is now per-project, not machine-global.

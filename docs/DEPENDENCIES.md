@@ -16,7 +16,7 @@
 ## What to localize inside project (recommended)
 
 - Local app modules and adapters only:
-  - `DisplayHAL`, `SimpleUI`, `AppScreens`, `OnScreenKeyboard`, `WiFiService`, `TimeService`, `Pcf8574Buttons`
+  - `DisplayHAL`, `SimpleUI`, `AppScreens`, `OnScreenKeyboard`, `WiFiService`, `TimeService`, `Pcf8574Buttons`, `BuzzerService`
 - Project-local display config:
   - `iot_terminal_ui.ino.globals.h`
 - Project scripts/docs for reproducibility:
@@ -55,5 +55,6 @@ For this project, external libraries + strict version notes is the best balance.
 
 - Touch uses `D2` for `TOUCH_CS` and `D1` for `TOUCH_IRQ`.
 - `PCF8574` buttons use `GPIO3` (`SDA`) and `GPIO1` (`SCL`) at address `0x20`.
+- Passive buzzer is assigned to `D0` / `GPIO16`.
 - With that wiring, UART pins are repurposed for I2C, so serial logging is disabled by default.
 - If Serial Monitor is opened anyway, I2C traffic on `GPIO1/GPIO3` appears as garbage characters in the terminal.

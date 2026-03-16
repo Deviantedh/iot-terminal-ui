@@ -16,6 +16,9 @@ public:
   DisplayHAL(uint8_t touchCs, uint8_t touchIrq, int8_t backlightPin = -1);
 
   void begin();
+  void displaySleepOn();
+  void displaySleepOff();
+  bool displayIsSleeping() const;
   bool readTouch(int &tx, int &ty);
   bool getTap(int &tx, int &ty);
   void waitTouchRelease();
@@ -31,6 +34,7 @@ private:
   bool touchLatched;
   int8_t backlightPin;
   BacklightLevel currentBacklightLevel;
+  bool displaySleeping;
 
   int touchToScreenX(int rawY);
   int touchToScreenY(int rawX);

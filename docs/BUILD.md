@@ -17,6 +17,7 @@ Required external dependencies:
 - `XPT2046_Touchscreen` `1.4`
 - `ESP8266WiFi` and `LittleFS` come from the ESP8266 core package
 - time sync uses the ESP8266 core SNTP support via standard libc time functions
+- passive buzzer uses the ESP8266 core `tone()` support on `D0 / GPIO16`
 
 ## Where TFT setup is defined
 
@@ -80,17 +81,20 @@ arduino-cli compile --fqbn esp8266:esp8266:nodemcuv2 --verbose .
 - `SPI_FREQUENCY = 40000000` is the current stable working value used by the UI code and docs.
 - Touch wiring stays on `D2` (`TOUCH_CS`) and `D1` (`TOUCH_IRQ`).
 - `PCF8574` buttons are on software I2C lines `GPIO3` (`SDA`) and `GPIO1` (`SCL`) at address `0x20`.
+- Passive buzzer is currently assigned to `D0` / `GPIO16`.
 - Because `GPIO1/GPIO3` are used by I2C, `APP_SERIAL_LOGGING_ENABLED` defaults to `0`; enable serial logging only if you are not using those pins for the expander.
 - Current navigation model:
   - `HOME` with NTP time and `PLAY` / `MENU`
   - `MENU` with `PROFILE` / `TOP UP` / `SETTINGS` / `HOME`
   - `BALANCE` remains a separate screen opened from `GAME`
 - Current power behavior:
-  - short `POWER` -> black-screen sleep -> wake back to previous screen
+  - short `POWER` -> `ST7789 Display OFF + Sleep In` -> wake back to previous screen
   - long `POWER` -> pseudo-off standby -> wake to `HOME`
   - physical `MENU` -> safe jump to `HOME`
+- Wake from standby restarts the existing non-blocking Wi-Fi auto-connect flow if saved credentials or built-in fallback networks are available.
 - Wi-Fi credentials are stored in LittleFS at `/wifi_credentials.txt`.
 - Built-in fallback Wi-Fi networks are defined in `WiFiProfiles.cpp` and should be reviewed per device/project handoff.
 - `build/` is a generated local artifact and should not be treated as source.
 - The UI uses partial redraw and profiling already; avoid large redraw refactors unless necessary.
 - `GAME` content is still intentionally placeholder-only; only the balance entry point is wired.
+- `GPIO16` is acceptable for the current buzzer output path, but keep in mind its usual ESP8266 limitations outside this use case.

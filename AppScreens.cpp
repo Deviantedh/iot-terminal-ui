@@ -523,6 +523,17 @@ static bool findMatchingBuiltInNetwork(WiFiCredentials& out) {
   return false;
 }
 
+static void resetStartupAutoConnectState() {
+  startupAutoConnectDone = false;
+  startupSavedAttempted = false;
+  startupBuiltInScanStarted = false;
+  startupBuiltInAttempted = false;
+  wifiAutoReconnectEnabled = false;
+  wifiReconnectPending = false;
+  wifiReconnectDueMs = 0;
+  wifiReconnectNextPollMs = 0;
+}
+
 static void beginStartupBuiltInScan(AppState& app) {
   if (!wifiProfiles.hasBuiltInNetworks() || startupBuiltInScanStarted) {
     startupAutoConnectDone = true;
@@ -1043,6 +1054,8 @@ static void wakeFromStandbyMode(AppState& app) {
   app.keyboardTarget = INPUT_TARGET_NONE;
   app.currentScreen = SCREEN_HOME;
   app.balanceReturnScreen = SCREEN_GAME;
+  resetStartupAutoConnectState();
+  restoreWifiFormState(app);
   noteInteraction(app);
   app.fullRedrawRequested = true;
 }
@@ -1248,13 +1261,7 @@ void initAppState(AppState& app) {
 
   app.gameCacheValid = false;
 
-  startupAutoConnectDone = false;
-  startupSavedAttempted = false;
-  startupBuiltInScanStarted = false;
-  startupBuiltInAttempted = false;
-  wifiAutoReconnectEnabled = false;
-  wifiReconnectPending = false;
-  wifiReconnectDueMs = 0;
+  resetStartupAutoConnectState();
 
   WiFiCredentials saved;
   if (wifiProfilesInit && wifiProfiles.loadSaved(saved)) {

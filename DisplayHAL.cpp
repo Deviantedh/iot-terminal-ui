@@ -1,5 +1,10 @@
 #include "DisplayHAL.h"
 
+static const uint8_t ST7789_CMD_SLEEP_IN = 0x10;
+static const uint8_t ST7789_CMD_SLEEP_OUT = 0x11;
+static const uint8_t ST7789_CMD_DISPLAY_OFF = 0x28;
+static const uint8_t ST7789_CMD_DISPLAY_ON = 0x29;
+
 static int medianOf5(int values[5]) {
   for (int i = 1; i < 5; i++) {
     int key = values[i];
@@ -18,12 +23,14 @@ DisplayHAL::DisplayHAL(uint8_t touchCs, uint8_t touchIrq, int8_t backlightPinVal
     ts(touchCs, touchIrq),
     touchLatched(false),
     backlightPin(backlightPinValue),
-    currentBacklightLevel(BACKLIGHT_NORMAL) {
+    currentBacklightLevel(BACKLIGHT_NORMAL),
+    displaySleeping(false) {
 }
 
 void DisplayHAL::begin() {
   tft.init();
   tft.setRotation(1);
+  displaySleeping = false;
 
   ts.begin();
   ts.setRotation(1);
@@ -34,6 +41,34 @@ void DisplayHAL::begin() {
     analogWriteRange(255);
     analogWrite(backlightPin, 255);
   }
+}
+
+void DisplayHAL::displaySleepOn() {
+  if (displaySleeping) {
+    return;
+  }
+
+  tft.writecommand(ST7789_CMD_DISPLAY_OFF);
+  delay(20);
+  tft.writecommand(ST7789_CMD_SLEEP_IN);
+  delay(120);
+  displaySleeping = true;
+}
+
+void DisplayHAL::displaySleepOff() {
+  if (!displaySleeping) {
+    return;
+  }
+
+  tft.writecommand(ST7789_CMD_SLEEP_OUT);
+  delay(120);
+  tft.writecommand(ST7789_CMD_DISPLAY_ON);
+  delay(20);
+  displaySleeping = false;
+}
+
+bool DisplayHAL::displayIsSleeping() const {
+  return displaySleeping;
 }
 
 int DisplayHAL::touchToScreenX(int rawY) {

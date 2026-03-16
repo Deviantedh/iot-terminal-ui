@@ -34,6 +34,8 @@ later game integration and server-side logic.
   - lightweight NTP time sync for `HOME`
 - `Pcf8574Buttons`
   - debounced physical button polling with short/long `POWER`
+- `BuzzerService`
+  - lightweight passive buzzer output on `D0 / GPIO16`
 - `iot_terminal_ui.ino`
   - entry point, setup, main loop
 
@@ -56,8 +58,8 @@ later game integration and server-side logic.
 
 Power behavior:
 
-- short `POWER`: black-screen sleep, wake back to the same screen
-- long `POWER`: pseudo-off standby, wake to `HOME`
+- short `POWER`: ST7789 display off + sleep-in, wake back to the same screen
+- long `POWER`: pseudo-off standby, wake to `HOME` and restart non-blocking Wi-Fi auto-connect flow
 - physical `MENU`: safe jump to `HOME`
 
 ## Build summary
@@ -102,6 +104,7 @@ Hardware notes:
 
 - touch stays on `TOUCH_CS = D2`, `TOUCH_IRQ = D1`
 - `PCF8574` buttons use `SDA = GPIO3 (RX)`, `SCL = GPIO1 (TX)`, address `0x20`
+- passive buzzer is assigned to `D0 / GPIO16`
 - because `GPIO1/GPIO3` are reused for I2C, serial logging is disabled by default in `iot_terminal_ui.ino.globals.h`
 
 `arduino-cli`:
@@ -141,6 +144,7 @@ on `TX/RX` as garbage characters. That is a wiring side effect, not firmware log
 - `iot_terminal_ui.ino` contains compile-time guards that fail the build if that setup is not injected.
 - `tools/print_project_dependencies.sh` supports autodetection and optional overrides through `ARDUINO_LIBRARIES_DIR` and `ARDUINO_DATA_DIR`.
 - Review built-in Wi-Fi fallback entries in `WiFiProfiles.cpp` before handing the project to another participant.
+- `GPIO16` works for simple buzzer output in the current implementation, but it still keeps the usual ESP8266 pin-16 limitations for other use cases such as interrupts/deep-sleep wake.
 
 ## Notes for the next integration stage
 
