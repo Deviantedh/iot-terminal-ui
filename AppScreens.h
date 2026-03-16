@@ -33,15 +33,19 @@ enum PendingAction {
   ACTION_GOTO_SETTINGS
 };
 
-enum DirtyRegion : uint8_t {
-  DIRTY_NONE         = 0,
-  DIRTY_BALANCE_CARD = 1 << 0,
-  DIRTY_WINS_CARD    = 1 << 1,
-  DIRTY_WIFI_CARD    = 1 << 2,
-  DIRTY_SOUND_CARD   = 1 << 3,
-  DIRTY_GAME_AREA    = 1 << 4,
-  DIRTY_KEYBOARD_INPUT = 1 << 5,
-  DIRTY_TOUCH_DIAG   = 1 << 6
+enum DirtyRegion : uint16_t {
+  DIRTY_NONE               = 0,
+  DIRTY_BALANCE_CARD       = 1 << 0,
+  DIRTY_WINS_CARD          = 1 << 1,
+  DIRTY_WIFI_CARD          = 1 << 2,
+  DIRTY_SOUND_CARD         = 1 << 3,
+  DIRTY_GAME_AREA          = 1 << 4,
+  DIRTY_KEYBOARD_INPUT     = 1 << 5,
+  DIRTY_TOUCH_DIAG         = 1 << 6,
+  DIRTY_WIFI_BADGE         = 1 << 7,
+  DIRTY_WIFI_ACTION_BUTTON = 1 << 8,
+  DIRTY_NETWORK_PAGE_LABEL = 1 << 9,
+  DIRTY_UI_OVERLAY         = 1 << 10
 };
 
 enum KeyboardInputTarget : uint8_t {
@@ -64,6 +68,29 @@ enum WifiFlowState : uint8_t {
   WIFI_FLOW_CONNECTING,
   WIFI_FLOW_CONNECTED,
   WIFI_FLOW_ERROR
+};
+
+enum AppUiStatusLevel : uint8_t {
+  APP_UI_STATUS_INFO = 0,
+  APP_UI_STATUS_ERROR,
+  APP_UI_STATUS_BUSY
+};
+
+enum AppEventType : uint8_t {
+  APP_EVENT_NONE = 0,
+  APP_EVENT_WIFI_CONNECTED,
+  APP_EVENT_WIFI_DISCONNECTED,
+  APP_EVENT_BALANCE_UPDATED,
+  APP_EVENT_EXTERNAL_MESSAGE,
+  APP_EVENT_SHOW_NOTIFICATION,
+  APP_EVENT_SHOW_ERROR,
+  APP_EVENT_GAME_STATE_CHANGED
+};
+
+struct AppEvent {
+  AppEventType type;
+  int32_t value;
+  char text[33];
 };
 
 struct AppState {
@@ -97,10 +124,11 @@ struct AppState {
   uint8_t networkPage;
 
   unsigned long lastTouchTime;
+  unsigned long lastInteractionMs;
 
   // Redraw control.
   bool fullRedrawRequested;
-  uint8_t dirtyRegions;
+  uint16_t dirtyRegions;
 
   // Button press animation state.
   bool buttonAnimActive;
@@ -119,6 +147,34 @@ struct AppState {
   char lastDrawnSsid[33];
   char lastDrawnPasswordMasked[65];
   WifiFlowState lastDrawnWifiFlowState;
+  char lastDrawnWifiBadgeText[16];
+  uint16_t lastDrawnWifiBadgeColor;
+  char lastDrawnWifiActionText[16];
+  uint16_t lastDrawnWifiActionColor;
+  uint8_t lastDrawnNetworkPage;
+  bool networkListCacheValid;
+
+  // Lightweight global UI feedback for future game/server integration.
+  bool uiStatusVisible;
+  AppUiStatusLevel uiStatusLevel;
+  char uiStatusText[33];
+  unsigned long uiStatusUntilMs;
+  bool uiBusy;
+  char uiBusyText[17];
+
+  // Fixed-size event queue to avoid dynamic allocation.
+  AppEvent eventQueue[6];
+  uint8_t eventHead;
+  uint8_t eventTail;
+
+  // Runtime diagnostics and energy hooks.
+  bool debugMode;
+  unsigned long lastDebugPrintMs;
+  uint32_t fullRedrawCount;
+  uint32_t partialRedrawCount;
+  uint32_t idleLoopCount;
+  bool idleMode;
+  unsigned long idleSinceMs;
 
   bool gameCacheValid;
 };
@@ -142,5 +198,22 @@ void updateTouchState(AppState& app, bool touched, int tx, int ty);
 
 // Выполнение запрошенных обновлений экрана
 void processUiUpdates(TFT_eSPI& tft, SimpleUI& ui, AppState& app);
+
+// Lightweight UI API for future game/server logic.
+void appUiShowMessage(AppState& app, const char* text,
+                      uint16_t color = TFT_CYAN, unsigned long durationMs = 2000);
+void appUiShowError(AppState& app, const char* text, unsigned long durationMs = 2500);
+void appUiSetBusy(AppState& app, bool busy, const char* text = "BUSY");
+void appUiSwitchScreen(AppState& app, ScreenState screen);
+
+// Lightweight event queue for future integration.
+bool appPostEvent(AppState& app, AppEventType type, int32_t value = 0, const char* text = nullptr);
+bool appConsumeEvent(AppState& app, AppEvent& out);
+
+// Runtime diagnostics / idle helpers.
+void appSetDebugMode(AppState& app, bool enabled);
+bool appIsDebugMode(const AppState& app);
+bool appIsIdleMode(const AppState& app);
+uint8_t appLoopDelayMs(const AppState& app);
 
 #endif

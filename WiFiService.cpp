@@ -1,17 +1,26 @@
 #include "WiFiService.h"
 
+#ifndef WIFI_MODEM_POWER_SAVE_ENABLED
+#define WIFI_MODEM_POWER_SAVE_ENABLED 0
+#endif
+
 WiFiService::WiFiService()
   : currentState(WIFI_SERVICE_IDLE),
     currentStatus(WL_IDLE_STATUS),
     connectStartedAtMs(0),
     currentScanState(WIFI_SCAN_STATE_IDLE),
     scanStateChanged(false),
+    wifiPowerSaveEnabled(false),
     scanResultCount(0) {
 }
 
 void WiFiService::begin() {
   WiFi.persistent(false);
   WiFi.mode(WIFI_STA);
+#if WIFI_MODEM_POWER_SAVE_ENABLED
+  WiFi.setSleepMode(WIFI_NONE_SLEEP);
+#endif
+  wifiPowerSaveEnabled = false;
   currentStatus = WiFi.status();
 }
 
@@ -127,4 +136,23 @@ bool WiFiService::consumeScanStateChanged() {
   bool changed = scanStateChanged;
   scanStateChanged = false;
   return changed;
+}
+
+void WiFiService::setPowerSaveEnabled(bool enabled) {
+#if !WIFI_MODEM_POWER_SAVE_ENABLED
+  (void)enabled;
+  wifiPowerSaveEnabled = false;
+  return;
+#else
+  if (wifiPowerSaveEnabled == enabled) {
+    return;
+  }
+
+  WiFi.setSleepMode(enabled ? WIFI_MODEM_SLEEP : WIFI_NONE_SLEEP);
+  wifiPowerSaveEnabled = enabled;
+#endif
+}
+
+bool WiFiService::powerSaveEnabled() const {
+  return wifiPowerSaveEnabled;
 }

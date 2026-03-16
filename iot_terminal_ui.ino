@@ -11,10 +11,16 @@
 #error "ST7789_DRIVER must be defined by the project-local TFT_eSPI setup."
 #endif
 
+#ifndef APP_DEBUG_MODE_DEFAULT
+#define APP_DEBUG_MODE_DEFAULT 0
+#endif
+
 #define TOUCH_CS  D2
 #define TOUCH_IRQ D1
+// Set a PWM-capable GPIO here if the TFT backlight transistor is wired to a controllable pin.
+#define BACKLIGHT_PIN -1
 
-DisplayHAL displayHal(TOUCH_CS, TOUCH_IRQ);
+DisplayHAL displayHal(TOUCH_CS, TOUCH_IRQ, BACKLIGHT_PIN);
 AppState app;
 SimpleUI* ui = nullptr;
 
@@ -34,9 +40,12 @@ void setup() {
   Serial.print("TFT SPI_TOUCH_FREQUENCY: ");
   Serial.println((uint32_t)SPI_TOUCH_FREQUENCY);
 #endif
+  Serial.print("Backlight control: ");
+  Serial.println(displayHal.backlightControlSupported() ? "GPIO PWM" : "not wired (stub only)");
 
   displayHal.begin();
   initAppState(app);
+  appSetDebugMode(app, APP_DEBUG_MODE_DEFAULT != 0);
 
   static SimpleUI uiInstance(displayHal.getTft());
   ui = &uiInstance;
@@ -59,5 +68,7 @@ void loop() {
 
   processUiUpdates(displayHal.getTft(), *ui, app);
 
-  delay(1);
+  displayHal.setBacklightLevel(appIsIdleMode(app) ? BACKLIGHT_DIM : BACKLIGHT_NORMAL);
+
+  delay(appLoopDelayMs(app));
 }

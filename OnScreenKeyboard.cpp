@@ -96,7 +96,7 @@ void OnScreenKeyboard::draw() {
 }
 
 void OnScreenKeyboard::drawInputOnly() {
-  drawInputBar();
+  drawInputText(false);
 }
 
 void OnScreenKeyboard::drawKeysOnly() {
@@ -105,8 +105,17 @@ void OnScreenKeyboard::drawKeysOnly() {
 }
 
 void OnScreenKeyboard::drawInputBar() {
-  tft.fillRect(INPUT_X, INPUT_Y, INPUT_W, INPUT_H, TFT_BLACK);
-  tft.drawRect(INPUT_X, INPUT_Y, INPUT_W, INPUT_H, TFT_WHITE);
+  drawInputText(true);
+}
+
+void OnScreenKeyboard::drawInputText(bool redrawFrame) {
+  if (redrawFrame) {
+    tft.fillRect(INPUT_X, INPUT_Y, INPUT_W, INPUT_H, TFT_BLACK);
+    tft.drawRect(INPUT_X, INPUT_Y, INPUT_W, INPUT_H, TFT_WHITE);
+  } else {
+    // Hot path: text changes often, so keep the frame and clear only the inner text area.
+    tft.fillRect(INPUT_X + 2, INPUT_Y + 2, INPUT_W - 4, INPUT_H - 4, TFT_BLACK);
+  }
   ui.drawCenteredText(inputLen > 0 ? inputText : "_",
                       INPUT_X + INPUT_W / 2, INPUT_Y + INPUT_H / 2,
                       TFT_WHITE, TFT_BLACK, 2);

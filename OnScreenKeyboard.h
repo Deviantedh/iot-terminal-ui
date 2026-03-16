@@ -44,6 +44,7 @@ private:
   KeyboardPage currentPage;
 
   void drawInputBar();
+  void drawInputText(bool redrawFrame);
   void drawControlButtons();
   void drawKeyGrid();
   void drawCharRow(int y, const char* chars);

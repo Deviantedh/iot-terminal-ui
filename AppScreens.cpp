@@ -8,6 +8,21 @@ static const unsigned long TOUCH_DEBOUNCE = 180;
 static const unsigned long BUTTON_ANIM_MS = 80;
 static const unsigned long PROFILE_PRINT_INTERVAL_MS = 1000;
 static const unsigned long WIFI_RECONNECT_INTERVAL_MS = 5000;
+static const unsigned long WIFI_RECONNECT_POLL_MS = 250;
+static const unsigned long WIFI_RECONNECT_POLL_IDLE_MS = 1000;
+static const unsigned long UI_STATUS_DEFAULT_MS = 2000;
+static const unsigned long IDLE_THRESHOLD_MS = 15000;
+static const unsigned long DEBUG_PRINT_INTERVAL_MS = 5000;
+static const unsigned long DEBUG_PRINT_INTERVAL_IDLE_MS = 15000;
+
+static const int UI_OVERLAY_X = 198;
+static const int UI_OVERLAY_Y = 6;
+static const int UI_OVERLAY_W = 118;
+static const int UI_OVERLAY_H = 24;
+static const int IDLE_DIM_X = 0;
+static const int IDLE_DIM_Y = 226;
+static const int IDLE_DIM_W = 320;
+static const int IDLE_DIM_H = 14;
 
 // ---------------------------
 // Layout
@@ -145,10 +160,16 @@ static bool startupBuiltInAttempted = false;
 static bool wifiAutoReconnectEnabled = false;
 static bool wifiReconnectPending = false;
 static unsigned long wifiReconnectDueMs = 0;
+static unsigned long wifiReconnectNextPollMs = 0;
 
 static void fitTextWithEllipsis(TFT_eSPI& tft, const char* src, char* out, size_t outSize, int maxWidthPx);
 static void restoreWifiFormState(AppState& app);
-static void markDirtyRegions(AppState& app, uint8_t regions);
+static void markDirtyRegions(AppState& app, uint16_t regions);
+static void noteInteraction(AppState& app);
+static bool appHasActiveWork(const AppState& app);
+static void updateIdleState(AppState& app, unsigned long nowMs);
+static void syncWifiPowerSave(const AppState& app);
+static unsigned long debugPrintIntervalMs(const AppState& app);
 
 static void configureWifiPrimaryButton(const AppState& app) {
   if (app.wifiFlowState == WIFI_FLOW_CONNECTED) {
@@ -181,7 +202,7 @@ static bool startWifiConnect(AppState& app) {
   if (app.ssid[0] == '\0') {
     app.wifiFlowState = WIFI_FLOW_ERROR;
     wifiReconnectPending = false;
-    markDirtyRegions(app, DIRTY_WIFI_CARD);
+    markDirtyRegions(app, DIRTY_WIFI_BADGE | DIRTY_WIFI_ACTION_BUTTON);
     return false;
   }
 
@@ -191,9 +212,10 @@ static bool startWifiConnect(AppState& app) {
   }
 
   wifiReconnectPending = false;
+  wifiReconnectNextPollMs = 0;
   bool started = wifiService.beginConnect(app.ssid, app.password);
   app.wifiFlowState = started ? WIFI_FLOW_CONNECTING : WIFI_FLOW_ERROR;
-  markDirtyRegions(app, DIRTY_WIFI_CARD);
+  markDirtyRegions(app, DIRTY_WIFI_BADGE | DIRTY_WIFI_ACTION_BUTTON);
   return started;
 }
 
@@ -206,8 +228,9 @@ static void armWifiReconnect(AppState& app) {
 
   wifiReconnectPending = true;
   wifiReconnectDueMs = millis() + WIFI_RECONNECT_INTERVAL_MS;
+  wifiReconnectNextPollMs = 0;
   app.wifiFlowState = WIFI_FLOW_RETRY_WAIT;
-  markDirtyRegions(app, DIRTY_WIFI_CARD);
+  markDirtyRegions(app, DIRTY_WIFI_BADGE | DIRTY_WIFI_ACTION_BUTTON);
 }
 
 static bool initWiFiProfilesIfNeeded() {
@@ -256,17 +279,145 @@ static bool edgeAwareCardHit(SimpleUI& ui, int tx, int ty, int x, int y, int w, 
 static void invalidateDynamicCaches(AppState& app) {
   app.balanceCacheValid = false;
   app.settingsCacheValid = false;
+  app.networkListCacheValid = false;
   app.gameCacheValid = false;
 }
 
-static void markDirtyRegions(AppState& app, uint8_t regions) {
+static void markDirtyRegions(AppState& app, uint16_t regions) {
   app.dirtyRegions |= regions;
 }
 
-static uint8_t consumeDirtyRegions(AppState& app) {
-  uint8_t regions = app.dirtyRegions;
+static uint16_t consumeDirtyRegions(AppState& app) {
+  uint16_t regions = app.dirtyRegions;
   app.dirtyRegions = DIRTY_NONE;
   return regions;
+}
+
+static void noteInteraction(AppState& app) {
+  const bool wasIdle = app.idleMode;
+  app.lastInteractionMs = millis();
+  if (wasIdle) {
+    app.idleMode = false;
+    app.idleSinceMs = 0;
+    markDirtyRegions(app, DIRTY_UI_OVERLAY);
+  }
+}
+
+static bool appHasActiveWork(const AppState& app) {
+  if (app.keyboardActive) {
+    return true;
+  }
+
+  switch (app.wifiFlowState) {
+    case WIFI_FLOW_CONNECTING:
+    case WIFI_FLOW_SCANNING:
+    case WIFI_FLOW_RETRY_WAIT:
+      return true;
+    default:
+      break;
+  }
+
+  return app.uiBusy;
+}
+
+static void updateIdleState(AppState& app, unsigned long nowMs) {
+  const bool shouldBeIdle = !appHasActiveWork(app) &&
+                            (long)(nowMs - app.lastInteractionMs) >= (long)IDLE_THRESHOLD_MS;
+  if (shouldBeIdle == app.idleMode) {
+    return;
+  }
+
+  app.idleMode = shouldBeIdle;
+  app.idleSinceMs = shouldBeIdle ? nowMs : 0;
+  markDirtyRegions(app, DIRTY_UI_OVERLAY);
+}
+
+static const char* screenStateName(ScreenState screen) {
+  switch (screen) {
+    case SCREEN_MENU: return "MENU";
+    case SCREEN_GAME: return "GAME";
+    case SCREEN_BALANCE: return "BALANCE";
+    case SCREEN_SETTINGS: return "SETTINGS";
+  }
+  return "MENU";
+}
+
+static const char* settingsViewName(SettingsViewState view) {
+  switch (view) {
+    case SETTINGS_VIEW_MAIN: return "MAIN";
+    case SETTINGS_VIEW_WIFI: return "WIFI";
+    case SETTINGS_VIEW_TOUCH_DIAGNOSTICS: return "TOUCH";
+  }
+  return "MAIN";
+}
+
+static uint16_t uiStatusLevelColor(AppUiStatusLevel level) {
+  switch (level) {
+    case APP_UI_STATUS_INFO: return TFT_CYAN;
+    case APP_UI_STATUS_ERROR: return TFT_RED;
+    case APP_UI_STATUS_BUSY: return TFT_YELLOW;
+  }
+  return TFT_CYAN;
+}
+
+static const char* activeUiOverlayText(const AppState& app) {
+  if (app.uiBusy && app.uiBusyText[0] != '\0') {
+    return app.uiBusyText;
+  }
+  if (app.uiStatusVisible && app.uiStatusText[0] != '\0') {
+    return app.uiStatusText;
+  }
+  return nullptr;
+}
+
+static uint16_t activeUiOverlayColor(const AppState& app) {
+  if (app.uiBusy) {
+    return uiStatusLevelColor(APP_UI_STATUS_BUSY);
+  }
+  if (app.uiStatusVisible) {
+    return uiStatusLevelColor(app.uiStatusLevel);
+  }
+  return TFT_BLACK;
+}
+
+static void drawUiOverlay(TFT_eSPI& tft, const AppState& app) {
+  tft.fillRect(UI_OVERLAY_X, UI_OVERLAY_Y, UI_OVERLAY_W, UI_OVERLAY_H, TFT_BLACK);
+  tft.fillRect(IDLE_DIM_X, IDLE_DIM_Y, IDLE_DIM_W, IDLE_DIM_H, TFT_BLACK);
+
+  if (app.idleMode) {
+    // Cheap idle indicator instead of a full-screen dimming pass.
+    tft.fillRect(IDLE_DIM_X, IDLE_DIM_Y, IDLE_DIM_W, IDLE_DIM_H, TFT_DARKGREY);
+    tft.setTextDatum(MC_DATUM);
+    tft.setTextColor(TFT_LIGHTGREY, TFT_DARKGREY);
+    tft.drawString("IDLE", IDLE_DIM_X + IDLE_DIM_W / 2, IDLE_DIM_Y + IDLE_DIM_H / 2, 2);
+    tft.setTextDatum(TL_DATUM);
+  }
+
+  const char* text = activeUiOverlayText(app);
+  if (text == nullptr || text[0] == '\0') {
+    return;
+  }
+
+  char overlayText[20];
+  fitTextWithEllipsis(tft, text, overlayText, sizeof(overlayText), UI_OVERLAY_W - 4);
+  tft.setTextDatum(TR_DATUM);
+  tft.setTextColor(activeUiOverlayColor(app), TFT_BLACK);
+  tft.setTextSize(1);
+  tft.drawString(overlayText, UI_OVERLAY_X + UI_OVERLAY_W - 2, UI_OVERLAY_Y + UI_OVERLAY_H / 2, 2);
+  tft.setTextDatum(TL_DATUM);
+}
+
+static void syncWifiPowerSave(const AppState& app) {
+  const bool allowPowerSave =
+    app.idleMode &&
+    !app.keyboardActive &&
+    wifiService.state() == WIFI_SERVICE_CONNECTED &&
+    app.wifiFlowState == WIFI_FLOW_CONNECTED;
+  wifiService.setPowerSaveEnabled(allowPowerSave);
+}
+
+static unsigned long debugPrintIntervalMs(const AppState& app) {
+  return app.idleMode ? DEBUG_PRINT_INTERVAL_IDLE_MS : DEBUG_PRINT_INTERVAL_MS;
 }
 
 static OnScreenKeyboard& getKeyboard(TFT_eSPI& tft, SimpleUI& ui) {
@@ -314,11 +465,11 @@ static void beginStartupBuiltInScan(AppState& app) {
   if (wifiService.startScan()) {
     startupBuiltInScanStarted = true;
     app.wifiFlowState = WIFI_FLOW_SCANNING;
-    markDirtyRegions(app, DIRTY_WIFI_CARD);
+    markDirtyRegions(app, DIRTY_WIFI_BADGE | DIRTY_WIFI_ACTION_BUTTON);
   } else {
     startupAutoConnectDone = true;
     app.wifiFlowState = WIFI_FLOW_ERROR;
-    markDirtyRegions(app, DIRTY_WIFI_CARD);
+    markDirtyRegions(app, DIRTY_WIFI_BADGE | DIRTY_WIFI_ACTION_BUTTON);
   }
 }
 
@@ -424,7 +575,19 @@ static int networkPageCount() {
   return (count + LIST_PAGE_SIZE - 1) / LIST_PAGE_SIZE;
 }
 
-static void drawNetworkListBody(TFT_eSPI& tft, SimpleUI& ui, AppState& app) {
+static void drawNetworkPageLabel(TFT_eSPI& tft, SimpleUI& ui, AppState& app) {
+  const int pages = networkPageCount();
+  if (app.networkListCacheValid && app.lastDrawnNetworkPage == app.networkPage) {
+    return;
+  }
+  tft.fillRect(106, 170, 108, 14, TFT_BLACK);
+  char pageTxt[24];
+  snprintf(pageTxt, sizeof(pageTxt), "Page %d/%d", app.networkPage + 1, pages);
+  ui.drawCenteredText(pageTxt, 160, 178, TFT_LIGHTGREY, TFT_BLACK, 1);
+  app.lastDrawnNetworkPage = app.networkPage;
+}
+
+static void drawNetworkListBody(TFT_eSPI& tft, SimpleUI& ui, AppState& app, bool drawPageLabel) {
   tft.fillRect(0, LIST_Y, SCREEN_W, 144, TFT_BLACK);
   ui.drawHeaderBar("SELECT NETWORK", TFT_CYAN);
 
@@ -484,9 +647,10 @@ static void drawNetworkListBody(TFT_eSPI& tft, SimpleUI& ui, AppState& app) {
     tft.setTextDatum(TL_DATUM);
   }
 
-  char pageTxt[24];
-  snprintf(pageTxt, sizeof(pageTxt), "Page %d/%d", app.networkPage + 1, pages);
-  ui.drawCenteredText(pageTxt, 160, 178, TFT_LIGHTGREY, TFT_BLACK, 1);
+  if (drawPageLabel) {
+    drawNetworkPageLabel(tft, ui, app);
+  }
+  app.networkListCacheValid = true;
 }
 
 static bool handleNetworkListTap(SimpleUI& ui, AppState& app, int tx, int ty) {
@@ -500,12 +664,12 @@ static bool handleNetworkListTap(SimpleUI& ui, AppState& app, int tx, int ty) {
   int pages = networkPageCount();
   if (edgeAwareButtonHit(ui, btnListPrev, tx, ty, 8, 8) && app.networkPage > 0) {
     app.networkPage--;
-    app.fullRedrawRequested = true;
+    markDirtyRegions(app, DIRTY_WIFI_CARD | DIRTY_NETWORK_PAGE_LABEL);
     return true;
   }
   if (edgeAwareButtonHit(ui, btnListNext, tx, ty, 8, 8) && app.networkPage + 1 < pages) {
     app.networkPage++;
-    app.fullRedrawRequested = true;
+    markDirtyRegions(app, DIRTY_WIFI_CARD | DIRTY_NETWORK_PAGE_LABEL);
     return true;
   }
 
@@ -608,6 +772,130 @@ static void applyPendingAction(AppState& app) {
   app.pendingAction = ACTION_NONE;
 }
 
+void appUiShowMessage(AppState& app, const char* text, uint16_t color, unsigned long durationMs) {
+  if (text == nullptr) {
+    text = "";
+  }
+  strncpy(app.uiStatusText, text, sizeof(app.uiStatusText) - 1);
+  app.uiStatusText[sizeof(app.uiStatusText) - 1] = '\0';
+  app.uiStatusLevel = (color == TFT_RED) ? APP_UI_STATUS_ERROR : APP_UI_STATUS_INFO;
+  app.uiStatusVisible = (app.uiStatusText[0] != '\0');
+  app.uiStatusUntilMs = millis() + ((durationMs > 0) ? durationMs : UI_STATUS_DEFAULT_MS);
+  markDirtyRegions(app, DIRTY_UI_OVERLAY);
+  noteInteraction(app);
+}
+
+void appUiShowError(AppState& app, const char* text, unsigned long durationMs) {
+  if (text == nullptr) {
+    text = "";
+  }
+  strncpy(app.uiStatusText, text, sizeof(app.uiStatusText) - 1);
+  app.uiStatusText[sizeof(app.uiStatusText) - 1] = '\0';
+  app.uiStatusLevel = APP_UI_STATUS_ERROR;
+  app.uiStatusVisible = (app.uiStatusText[0] != '\0');
+  app.uiStatusUntilMs = millis() + durationMs;
+  markDirtyRegions(app, DIRTY_UI_OVERLAY);
+  noteInteraction(app);
+}
+
+void appUiSetBusy(AppState& app, bool busy, const char* text) {
+  app.uiBusy = busy;
+  if (text == nullptr) {
+    text = "BUSY";
+  }
+  strncpy(app.uiBusyText, text, sizeof(app.uiBusyText) - 1);
+  app.uiBusyText[sizeof(app.uiBusyText) - 1] = '\0';
+  markDirtyRegions(app, DIRTY_UI_OVERLAY);
+  noteInteraction(app);
+}
+
+void appUiSwitchScreen(AppState& app, ScreenState screen) {
+  app.currentScreen = screen;
+  if (screen == SCREEN_SETTINGS) {
+    app.settingsView = SETTINGS_VIEW_MAIN;
+  }
+  app.fullRedrawRequested = true;
+  noteInteraction(app);
+}
+
+bool appPostEvent(AppState& app, AppEventType type, int32_t value, const char* text) {
+  const uint8_t nextTail = (uint8_t)((app.eventTail + 1) % 6);
+  if (nextTail == app.eventHead) {
+    return false;
+  }
+
+  AppEvent& slot = app.eventQueue[app.eventTail];
+  slot.type = type;
+  slot.value = value;
+  slot.text[0] = '\0';
+  if (text != nullptr) {
+    strncpy(slot.text, text, sizeof(slot.text) - 1);
+    slot.text[sizeof(slot.text) - 1] = '\0';
+  }
+  app.eventTail = nextTail;
+  markDirtyRegions(app, DIRTY_UI_OVERLAY);
+  return true;
+}
+
+bool appConsumeEvent(AppState& app, AppEvent& out) {
+  if (app.eventHead == app.eventTail) {
+    return false;
+  }
+
+  out = app.eventQueue[app.eventHead];
+  app.eventHead = (uint8_t)((app.eventHead + 1) % 6);
+  return true;
+}
+
+void appSetDebugMode(AppState& app, bool enabled) {
+  app.debugMode = enabled;
+}
+
+bool appIsDebugMode(const AppState& app) {
+  return app.debugMode;
+}
+
+bool appIsIdleMode(const AppState& app) {
+  return app.idleMode;
+}
+
+uint8_t appLoopDelayMs(const AppState& app) {
+  if (app.keyboardActive) {
+    return 1;
+  }
+  if (app.wifiFlowState == WIFI_FLOW_CONNECTING ||
+      app.wifiFlowState == WIFI_FLOW_SCANNING ||
+      app.wifiFlowState == WIFI_FLOW_RETRY_WAIT) {
+    return 1;
+  }
+  return app.idleMode ? 8 : 1;
+}
+
+static void handlePostedEvent(AppState& app, const AppEvent& event) {
+  switch (event.type) {
+    case APP_EVENT_WIFI_CONNECTED:
+      appUiShowMessage(app, (event.text[0] != '\0') ? event.text : "WiFi connected", TFT_CYAN, 1800);
+      break;
+    case APP_EVENT_WIFI_DISCONNECTED:
+      appUiShowError(app, (event.text[0] != '\0') ? event.text : "WiFi disconnected", 2200);
+      break;
+    case APP_EVENT_BALANCE_UPDATED:
+      app.balanceValue = (int)event.value;
+      markDirtyRegions(app, DIRTY_BALANCE_CARD);
+      break;
+    case APP_EVENT_EXTERNAL_MESSAGE:
+    case APP_EVENT_SHOW_NOTIFICATION:
+      appUiShowMessage(app, event.text, TFT_CYAN, UI_STATUS_DEFAULT_MS);
+      break;
+    case APP_EVENT_SHOW_ERROR:
+      appUiShowError(app, event.text, 2500);
+      break;
+    case APP_EVENT_GAME_STATE_CHANGED:
+    case APP_EVENT_NONE:
+      break;
+  }
+}
+
 static void drawAnimatedButton(SimpleUI& ui, ButtonAnimTarget target, bool pressed) {
   switch (target) {
     case BTN_ANIM_MENU_START:
@@ -696,6 +984,7 @@ void initAppState(AppState& app) {
   app.networkPage = 0;
 
   app.lastTouchTime = 0;
+  app.lastInteractionMs = millis();
 
   app.fullRedrawRequested = true;
   app.dirtyRegions = DIRTY_BALANCE_CARD | DIRTY_WINS_CARD | DIRTY_WIFI_CARD | DIRTY_SOUND_CARD | DIRTY_GAME_AREA;
@@ -715,6 +1004,31 @@ void initAppState(AppState& app) {
   app.lastDrawnSsid[0] = '\0';
   app.lastDrawnPasswordMasked[0] = '\0';
   app.lastDrawnWifiFlowState = WIFI_FLOW_IDLE;
+  app.lastDrawnWifiBadgeText[0] = '\0';
+  app.lastDrawnWifiBadgeColor = TFT_BLACK;
+  app.lastDrawnWifiActionText[0] = '\0';
+  app.lastDrawnWifiActionColor = TFT_BLACK;
+  app.lastDrawnNetworkPage = 0;
+  app.networkListCacheValid = false;
+
+  app.uiStatusVisible = false;
+  app.uiStatusLevel = APP_UI_STATUS_INFO;
+  app.uiStatusText[0] = '\0';
+  app.uiStatusUntilMs = 0;
+  app.uiBusy = false;
+  strncpy(app.uiBusyText, "BUSY", sizeof(app.uiBusyText) - 1);
+  app.uiBusyText[sizeof(app.uiBusyText) - 1] = '\0';
+
+  app.eventHead = 0;
+  app.eventTail = 0;
+
+  app.debugMode = false;
+  app.lastDebugPrintMs = 0;
+  app.fullRedrawCount = 0;
+  app.partialRedrawCount = 0;
+  app.idleLoopCount = 0;
+  app.idleMode = false;
+  app.idleSinceMs = 0;
 
   app.gameCacheValid = false;
 
@@ -795,7 +1109,7 @@ static void updateWinsCard(TFT_eSPI& tft, SimpleUI& ui, AppState& app, bool forc
   }
 }
 
-static void updateBalanceRegions(TFT_eSPI& tft, SimpleUI& ui, AppState& app, uint8_t regions, bool force) {
+static void updateBalanceRegions(TFT_eSPI& tft, SimpleUI& ui, AppState& app, uint16_t regions, bool force) {
   if (force || (regions & DIRTY_BALANCE_CARD)) {
     updateBalanceValueCard(tft, ui, app, force);
   }
@@ -837,45 +1151,87 @@ static void updateMainSettingsTouchCard(TFT_eSPI& tft, SimpleUI& ui) {
   ui.drawValueCard(touchCard);
 }
 
-static void updateWifiForm(TFT_eSPI& tft, SimpleUI& ui, AppState& app, bool force) {
-  char maskedPassword[65];
-  maskPassword(app.password, maskedPassword, sizeof(maskedPassword));
-  configureWifiPrimaryButton(app);
-
-  if (!force && app.settingsCacheValid &&
-      strcmp(app.ssid, app.lastDrawnSsid) == 0 &&
-      strcmp(maskedPassword, app.lastDrawnPasswordMasked) == 0 &&
-      app.wifiFlowState == app.lastDrawnWifiFlowState) {
-    return;
-  }
-
-  tft.fillRect(WIFI_FIELD_X, WIFI_SSID_Y, WIFI_FIELD_W, 188, TFT_BLACK);
-
-  UIValueCard ssidCard = {
-    WIFI_FIELD_X, WIFI_SSID_Y, WIFI_FIELD_W, WIFI_FIELD_H,
-    "SSID", (app.ssid[0] != '\0') ? app.ssid : "<tap to edit>",
-    TFT_BLACK, TFT_WHITE, TFT_LIGHTGREY, TFT_WHITE
-  };
-  ui.drawValueCard(ssidCard);
-
-  UIValueCard passCard = {
-    WIFI_FIELD_X, WIFI_PASS_Y, WIFI_FIELD_W, WIFI_FIELD_H,
-    "Password", (maskedPassword[0] != '\0') ? maskedPassword : "<tap to edit>",
-    TFT_BLACK, TFT_WHITE, TFT_LIGHTGREY, TFT_WHITE
-  };
-  ui.drawValueCard(passCard);
-
-  btnWifiScan.text = "SCAN NETWORKS";
-  ui.drawButton(btnWifiScan);
-  ui.drawButton(btnWifiConnect);
-  ui.drawButton(btnWifiBack);
-
+static void drawWifiStatusBadge(SimpleUI& ui, const AppState& app) {
   UIStatusBadge wifiBadge = {
     WIFI_STATUS_X, WIFI_STATUS_Y, WIFI_STATUS_W, WIFI_STATUS_H,
     getWifiStatusText(app),
     getWifiStatusColor(app), TFT_WHITE, TFT_WHITE
   };
   ui.drawStatusBadge(wifiBadge);
+}
+
+static bool wifiBadgeChanged(const AppState& app) {
+  return strcmp(getWifiStatusText(app), app.lastDrawnWifiBadgeText) != 0 ||
+         getWifiStatusColor(app) != app.lastDrawnWifiBadgeColor;
+}
+
+static bool wifiActionButtonChanged(const AppState& app) {
+  configureWifiPrimaryButton(app);
+  return strcmp(btnWifiConnect.text, app.lastDrawnWifiActionText) != 0 ||
+         btnWifiConnect.color != app.lastDrawnWifiActionColor;
+}
+
+static void updateWifiActionButton(SimpleUI& ui, AppState& app) {
+  ui.drawButton(btnWifiConnect);
+  strncpy(app.lastDrawnWifiActionText, btnWifiConnect.text, sizeof(app.lastDrawnWifiActionText) - 1);
+  app.lastDrawnWifiActionText[sizeof(app.lastDrawnWifiActionText) - 1] = '\0';
+  app.lastDrawnWifiActionColor = btnWifiConnect.color;
+}
+
+static void updateWifiBadge(SimpleUI& ui, AppState& app) {
+  drawWifiStatusBadge(ui, app);
+  strncpy(app.lastDrawnWifiBadgeText, getWifiStatusText(app), sizeof(app.lastDrawnWifiBadgeText) - 1);
+  app.lastDrawnWifiBadgeText[sizeof(app.lastDrawnWifiBadgeText) - 1] = '\0';
+  app.lastDrawnWifiBadgeColor = getWifiStatusColor(app);
+}
+
+static void updateWifiForm(TFT_eSPI& tft, SimpleUI& ui, AppState& app, uint16_t regions, bool force) {
+  char maskedPassword[65];
+  maskPassword(app.password, maskedPassword, sizeof(maskedPassword));
+  const bool credentialsChanged =
+    !app.settingsCacheValid ||
+    strcmp(app.ssid, app.lastDrawnSsid) != 0 ||
+    strcmp(maskedPassword, app.lastDrawnPasswordMasked) != 0;
+  const bool flowChanged =
+    !app.settingsCacheValid || app.wifiFlowState != app.lastDrawnWifiFlowState;
+  const bool badgeNeedsUpdate = force || flowChanged || (regions & DIRTY_WIFI_BADGE) || wifiBadgeChanged(app);
+  const bool actionNeedsUpdate = force || flowChanged || (regions & DIRTY_WIFI_ACTION_BUTTON) || wifiActionButtonChanged(app);
+
+  if (!force && !credentialsChanged && !flowChanged &&
+      !(regions & (DIRTY_WIFI_BADGE | DIRTY_WIFI_ACTION_BUTTON))) {
+    return;
+  }
+
+  if (force || credentialsChanged) {
+    tft.fillRect(WIFI_FIELD_X, WIFI_SSID_Y, WIFI_FIELD_W, 94, TFT_BLACK);
+
+    UIValueCard ssidCard = {
+      WIFI_FIELD_X, WIFI_SSID_Y, WIFI_FIELD_W, WIFI_FIELD_H,
+      "SSID", (app.ssid[0] != '\0') ? app.ssid : "<tap to edit>",
+      TFT_BLACK, TFT_WHITE, TFT_LIGHTGREY, TFT_WHITE
+    };
+    ui.drawValueCard(ssidCard);
+
+    UIValueCard passCard = {
+      WIFI_FIELD_X, WIFI_PASS_Y, WIFI_FIELD_W, WIFI_FIELD_H,
+      "Password", (maskedPassword[0] != '\0') ? maskedPassword : "<tap to edit>",
+      TFT_BLACK, TFT_WHITE, TFT_LIGHTGREY, TFT_WHITE
+    };
+    ui.drawValueCard(passCard);
+  }
+
+  if (force) {
+    btnWifiScan.text = "SCAN NETWORKS";
+    ui.drawButton(btnWifiScan);
+    ui.drawButton(btnWifiBack);
+  }
+  if (actionNeedsUpdate) {
+    // Hot path: status changes should not force redraw of the whole Wi-Fi form.
+    updateWifiActionButton(ui, app);
+  }
+  if (badgeNeedsUpdate) {
+    updateWifiBadge(ui, app);
+  }
 
   strncpy(app.lastDrawnSsid, app.ssid, sizeof(app.lastDrawnSsid) - 1);
   app.lastDrawnSsid[sizeof(app.lastDrawnSsid) - 1] = '\0';
@@ -889,15 +1245,19 @@ static void updateSoundCard(TFT_eSPI& tft, SimpleUI& ui, AppState& app, bool for
     return;
   }
 
-  tft.fillRect(SETTINGS_MAIN_SOUND_X, SETTINGS_MAIN_SOUND_Y,
-               SETTINGS_MAIN_SOUND_W, SETTINGS_MAIN_SOUND_H, TFT_BLACK);
-
   UIToggle soundToggle = {
     SETTINGS_MAIN_SOUND_X, SETTINGS_MAIN_SOUND_Y, SETTINGS_MAIN_SOUND_W, SETTINGS_MAIN_SOUND_H,
     "Sound", app.soundEnabled,
     TFT_BLACK, TFT_WHITE, TFT_WHITE, TFT_DARKGREEN, TFT_DARKGREY
   };
-  ui.drawToggle(soundToggle);
+  if (force || !app.settingsCacheValid) {
+    tft.fillRect(SETTINGS_MAIN_SOUND_X, SETTINGS_MAIN_SOUND_Y,
+                 SETTINGS_MAIN_SOUND_W, SETTINGS_MAIN_SOUND_H, TFT_BLACK);
+    ui.drawToggle(soundToggle);
+  } else {
+    // Hot path: only the switch value changes, the card label stays constant.
+    ui.drawToggleValue(soundToggle, app.soundEnabled);
+  }
 
   app.lastDrawnSoundEnabled = app.soundEnabled;
 }
@@ -964,7 +1324,7 @@ static void drawTouchDiagnosticsScreen(TFT_eSPI& tft, SimpleUI& ui, AppState& ap
   ui.drawButton(btnTouchDiagBack);
 }
 
-static void updateSettingsRegions(TFT_eSPI& tft, SimpleUI& ui, AppState& app, uint8_t regions, bool force) {
+static void updateSettingsRegions(TFT_eSPI& tft, SimpleUI& ui, AppState& app, uint16_t regions, bool force) {
   if (app.keyboardActive) {
     if (keyboard != nullptr) {
       if (force || (regions & DIRTY_KEYBOARD_INPUT)) {
@@ -973,6 +1333,15 @@ static void updateSettingsRegions(TFT_eSPI& tft, SimpleUI& ui, AppState& app, ui
       if (force || (regions & DIRTY_WIFI_CARD)) {
         getKeyboard(tft, ui).drawKeysOnly();
       }
+    }
+    return;
+  }
+
+  if (app.settingsView == SETTINGS_VIEW_WIFI && app.wifiFlowState == WIFI_FLOW_NETWORK_LIST) {
+    if (force || (regions & DIRTY_WIFI_CARD)) {
+      drawNetworkListBody(tft, ui, app, true);
+    } else if (regions & DIRTY_NETWORK_PAGE_LABEL) {
+      drawNetworkPageLabel(tft, ui, app);
     }
     return;
   }
@@ -990,7 +1359,7 @@ static void updateSettingsRegions(TFT_eSPI& tft, SimpleUI& ui, AppState& app, ui
   }
 
   if (app.settingsView == SETTINGS_VIEW_MAIN) {
-    if (force || (regions & DIRTY_WIFI_CARD)) {
+    if (force || (regions & (DIRTY_WIFI_CARD | DIRTY_WIFI_BADGE | DIRTY_WIFI_ACTION_BUTTON))) {
       updateMainSettingsWifiCard(tft, ui, app, force);
     }
     if (force) {
@@ -1000,8 +1369,8 @@ static void updateSettingsRegions(TFT_eSPI& tft, SimpleUI& ui, AppState& app, ui
       updateSoundCard(tft, ui, app, force);
     }
   } else {
-    if (force || (regions & DIRTY_WIFI_CARD)) {
-      updateWifiForm(tft, ui, app, force);
+    if (force || (regions & (DIRTY_WIFI_CARD | DIRTY_WIFI_BADGE | DIRTY_WIFI_ACTION_BUTTON))) {
+      updateWifiForm(tft, ui, app, regions, force);
     }
   }
   app.settingsCacheValid = true;
@@ -1088,7 +1457,7 @@ static void drawSettingsScreen(TFT_eSPI& tft, SimpleUI& ui, AppState& app) {
        app.wifiFlowState == WIFI_FLOW_SCAN_ERROR)) {
     drawScreenBase(tft);
     if (app.wifiFlowState == WIFI_FLOW_NETWORK_LIST) {
-      drawNetworkListBody(tft, ui, app);
+      drawNetworkListBody(tft, ui, app, true);
       ui.drawButton(btnListPrev);
       ui.drawButton(btnListNext);
       ui.drawButton(btnListBack);
@@ -1150,7 +1519,7 @@ void drawCurrentScreen(TFT_eSPI& tft, SimpleUI& ui, AppState& app) {
 }
 
 void updateCurrentScreenData(TFT_eSPI& tft, SimpleUI& ui, AppState& app) {
-  const uint8_t regions = app.dirtyRegions;
+  const uint16_t regions = app.dirtyRegions;
   switch (app.currentScreen) {
     case SCREEN_MENU:
       break;
@@ -1174,6 +1543,7 @@ void updateCurrentScreenData(TFT_eSPI& tft, SimpleUI& ui, AppState& app) {
 void updateTouchState(AppState& app, bool touched, int tx, int ty) {
   bool changed = (app.touchPressed != touched);
   if (touched) {
+    noteInteraction(app);
     if (app.touchScreenX != tx || app.touchScreenY != ty) {
       changed = true;
     }
@@ -1195,12 +1565,21 @@ void updateTouchState(AppState& app, bool touched, int tx, int ty) {
 void processUiUpdates(TFT_eSPI& tft, SimpleUI& ui, AppState& app) {
   const uint32_t frameStartUs = micros();
   bool drewSomething = false;
+  const unsigned long nowMs = millis();
 
   if (!wifiServiceInit) {
     wifiService.begin();
     wifiServiceInit = true;
   }
   initWiFiProfilesIfNeeded();
+  updateIdleState(app, nowMs);
+  syncWifiPowerSave(app);
+
+  if (app.uiStatusVisible && !app.uiBusy && nowMs >= app.uiStatusUntilMs) {
+    app.uiStatusVisible = false;
+    app.uiStatusText[0] = '\0';
+    markDirtyRegions(app, DIRTY_UI_OVERLAY);
+  }
 
   if (!startupAutoConnectDone && !app.keyboardActive) {
     if (!startupSavedAttempted && app.ssid[0] != '\0') {
@@ -1219,10 +1598,13 @@ void processUiUpdates(TFT_eSPI& tft, SimpleUI& ui, AppState& app) {
   }
 
   if (wifiReconnectPending &&
-      (long)(millis() - wifiReconnectDueMs) >= 0 &&
-      (wifiService.state() == WIFI_SERVICE_IDLE || wifiService.state() == WIFI_SERVICE_ERROR)) {
-    if (!startWifiConnect(app) && wifiAutoReconnectEnabled) {
-      armWifiReconnect(app);
+      (wifiService.state() == WIFI_SERVICE_IDLE || wifiService.state() == WIFI_SERVICE_ERROR) &&
+      (long)(nowMs - wifiReconnectNextPollMs) >= 0) {
+    wifiReconnectNextPollMs = nowMs + (app.idleMode ? WIFI_RECONNECT_POLL_IDLE_MS : WIFI_RECONNECT_POLL_MS);
+    if ((long)(nowMs - wifiReconnectDueMs) >= 0) {
+      if (!startWifiConnect(app) && wifiAutoReconnectEnabled) {
+        armWifiReconnect(app);
+      }
     }
   }
 
@@ -1234,6 +1616,7 @@ void processUiUpdates(TFT_eSPI& tft, SimpleUI& ui, AppState& app) {
       app.wifiFlowState = WIFI_FLOW_CONNECTED;
       wifiAutoReconnectEnabled = true;
       wifiReconnectPending = false;
+      appPostEvent(app, APP_EVENT_WIFI_CONNECTED, 0, "WiFi connected");
       if (wifiProfilesInit && app.ssid[0] != '\0') {
         wifiProfiles.saveSaved(app.ssid, app.password);
       }
@@ -1251,14 +1634,19 @@ void processUiUpdates(TFT_eSPI& tft, SimpleUI& ui, AppState& app) {
     } else if (s == WIFI_SERVICE_IDLE &&
                (app.wifiFlowState == WIFI_FLOW_CONNECTING || app.wifiFlowState == WIFI_FLOW_CONNECTED ||
                 app.wifiFlowState == WIFI_FLOW_RETRY_WAIT)) {
+      const bool wasConnected = (app.wifiFlowState == WIFI_FLOW_CONNECTED);
       if (wifiAutoReconnectEnabled && startupAutoConnectDone) {
         armWifiReconnect(app);
       } else {
         restoreWifiFormState(app);
       }
+      if (wasConnected) {
+        appPostEvent(app, APP_EVENT_WIFI_DISCONNECTED, 0, "WiFi disconnected");
+      }
     }
-    markDirtyRegions(app, DIRTY_WIFI_CARD);
+    markDirtyRegions(app, DIRTY_WIFI_BADGE | DIRTY_WIFI_ACTION_BUTTON);
   }
+  syncWifiPowerSave(app);
 
   if (wifiService.consumeScanStateChanged()) {
     WiFiScanState ss = wifiService.scanState();
@@ -1304,6 +1692,11 @@ void processUiUpdates(TFT_eSPI& tft, SimpleUI& ui, AppState& app) {
     markDirtyRegions(app, DIRTY_WIFI_CARD);
   }
 
+  AppEvent event;
+  while (appConsumeEvent(app, event)) {
+    handlePostedEvent(app, event);
+  }
+
   if (processButtonAnimation(ui, app)) {
     drewSomething = true;
   }
@@ -1313,9 +1706,9 @@ void processUiUpdates(TFT_eSPI& tft, SimpleUI& ui, AppState& app) {
     app.fullRedrawRequested = true;
   }
 
-  static uint8_t lastDirtyMask = DIRTY_NONE;
+  static uint16_t lastDirtyMask = DIRTY_NONE;
   static uint16_t dirtyStreak = 0;
-  const uint8_t pendingDirtyBeforeConsume = app.dirtyRegions;
+  const uint16_t pendingDirtyBeforeConsume = app.dirtyRegions;
   if (pendingDirtyBeforeConsume != DIRTY_NONE) {
     if (pendingDirtyBeforeConsume == lastDirtyMask) {
       dirtyStreak++;
@@ -1341,18 +1734,26 @@ void processUiUpdates(TFT_eSPI& tft, SimpleUI& ui, AppState& app) {
 
     invalidateDynamicCaches(app);
     drawCurrentScreen(tft, ui, app);
+    if (app.currentScreen != SCREEN_GAME && !app.keyboardActive) {
+      drawUiOverlay(tft, app);
+    }
     app.lastDrawnScreen = app.currentScreen;
     drewSomething = true;
+    app.fullRedrawCount++;
 
     app.fullRedrawRequested = false;
     app.dirtyRegions = DIRTY_NONE;
   } else {
     fullRedrawStreak = 0;
 
-    const uint8_t regions = consumeDirtyRegions(app);
+    const uint16_t regions = consumeDirtyRegions(app);
     if (regions != DIRTY_NONE) {
       switch (app.currentScreen) {
         case SCREEN_MENU:
+          if (regions & DIRTY_UI_OVERLAY) {
+            drawUiOverlay(tft, app);
+            drewSomething = true;
+          }
           break;
 
         case SCREEN_GAME:
@@ -1364,6 +1765,9 @@ void processUiUpdates(TFT_eSPI& tft, SimpleUI& ui, AppState& app) {
 
         case SCREEN_BALANCE:
           updateBalanceRegions(tft, ui, app, regions, false);
+          if (regions & DIRTY_UI_OVERLAY) {
+            drawUiOverlay(tft, app);
+          }
           drewSomething = true;
           break;
 
@@ -1375,15 +1779,23 @@ void processUiUpdates(TFT_eSPI& tft, SimpleUI& ui, AppState& app) {
             }
           } else {
             updateSettingsRegions(tft, ui, app, regions, false);
+            if (regions & DIRTY_UI_OVERLAY) {
+              drawUiOverlay(tft, app);
+            }
             drewSomething = true;
           }
           break;
+      }
+      if (drewSomething) {
+        app.partialRedrawCount++;
       }
     }
   }
 
   if (drewSomething) {
     yield();
+  } else if (app.idleMode) {
+    app.idleLoopCount++;
   }
 
   const uint32_t frameTimeUs = micros() - frameStartUs;
@@ -1398,7 +1810,6 @@ void processUiUpdates(TFT_eSPI& tft, SimpleUI& ui, AppState& app) {
     frameMaxUs = frameTimeUs;
   }
 
-  const unsigned long nowMs = millis();
   if (nowMs - lastPrintMs >= PROFILE_PRINT_INTERVAL_MS) {
     const uint32_t avgUs = (frameCount > 0) ? (frameSumUs / frameCount) : 0;
     Serial.print("UI frame us avg=");
@@ -1412,6 +1823,36 @@ void processUiUpdates(TFT_eSPI& tft, SimpleUI& ui, AppState& app) {
     frameMaxUs = 0;
     frameCount = 0;
     lastPrintMs = nowMs;
+  }
+
+  if (app.debugMode && nowMs - app.lastDebugPrintMs >= debugPrintIntervalMs(app)) {
+    Serial.print("DBG up=");
+    Serial.print(nowMs / 1000);
+    Serial.print("s heap=");
+    Serial.print(ESP.getFreeHeap());
+    Serial.print(" rst=");
+    Serial.print(ESP.getResetReason());
+    Serial.print(" scr=");
+    Serial.print(screenStateName(app.currentScreen));
+    if (app.currentScreen == SCREEN_SETTINGS) {
+      Serial.print("/");
+      Serial.print(settingsViewName(app.settingsView));
+    }
+    Serial.print(" wifi=");
+    Serial.print(getWifiStatusText(app));
+    Serial.print(" ps=");
+    Serial.print(wifiService.powerSaveEnabled() ? "on" : "off");
+    Serial.print(" rec=");
+    Serial.print(wifiReconnectPending ? "pending" : "off");
+    Serial.print(" idle=");
+    Serial.print(app.idleMode ? "1" : "0");
+    Serial.print(" redraw=");
+    Serial.print(app.fullRedrawCount);
+    Serial.print("/");
+    Serial.print(app.partialRedrawCount);
+    Serial.print(" idleLoops=");
+    Serial.println(app.idleLoopCount);
+    app.lastDebugPrintMs = nowMs;
   }
 }
 
@@ -1428,6 +1869,7 @@ void handleAppTouch(SimpleUI& ui, AppState& app, int tx, int ty) {
   }
 
   app.lastTouchTime = millis();
+  noteInteraction(app);
 
   switch (app.currentScreen) {
     case SCREEN_MENU:

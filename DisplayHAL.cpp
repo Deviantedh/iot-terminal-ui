@@ -13,8 +13,12 @@ static int medianOf5(int values[5]) {
   return values[2];
 }
 
-DisplayHAL::DisplayHAL(uint8_t touchCs, uint8_t touchIrq)
-  : tft(), ts(touchCs, touchIrq), touchLatched(false) {
+DisplayHAL::DisplayHAL(uint8_t touchCs, uint8_t touchIrq, int8_t backlightPinValue)
+  : tft(),
+    ts(touchCs, touchIrq),
+    touchLatched(false),
+    backlightPin(backlightPinValue),
+    currentBacklightLevel(BACKLIGHT_NORMAL) {
 }
 
 void DisplayHAL::begin() {
@@ -24,6 +28,12 @@ void DisplayHAL::begin() {
   ts.begin();
   ts.setRotation(1);
   touchLatched = false;
+
+  if (backlightPin >= 0) {
+    pinMode(backlightPin, OUTPUT);
+    analogWriteRange(255);
+    analogWrite(backlightPin, 255);
+  }
 }
 
 int DisplayHAL::touchToScreenX(int rawY) {
@@ -80,6 +90,36 @@ void DisplayHAL::waitTouchRelease() {
   while (ts.touched()) {
     delay(10);
   }
+}
+
+void DisplayHAL::setBacklightLevel(BacklightLevel level) {
+  if (currentBacklightLevel == level) {
+    return;
+  }
+  currentBacklightLevel = level;
+  if (backlightPin < 0) {
+    return;
+  }
+
+  switch (level) {
+    case BACKLIGHT_NORMAL:
+      analogWrite(backlightPin, 255);
+      break;
+    case BACKLIGHT_DIM:
+      analogWrite(backlightPin, 96);
+      break;
+    case BACKLIGHT_OFF:
+      analogWrite(backlightPin, 0);
+      break;
+  }
+}
+
+BacklightLevel DisplayHAL::backlightLevel() const {
+  return currentBacklightLevel;
+}
+
+bool DisplayHAL::backlightControlSupported() const {
+  return backlightPin >= 0;
 }
 
 TFT_eSPI& DisplayHAL::getTft() {

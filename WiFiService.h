@@ -50,6 +50,8 @@ public:
   int networkCount() const;
   const WiFiNetworkInfo* networkAt(int index) const;
   bool consumeScanStateChanged();
+  void setPowerSaveEnabled(bool enabled);
+  bool powerSaveEnabled() const;
 
 private:
   WiFiServiceState currentState;
@@ -57,6 +59,7 @@ private:
   unsigned long connectStartedAtMs;
   WiFiScanState currentScanState;
   bool scanStateChanged;
+  bool wifiPowerSaveEnabled;
 
   static const int MAX_SCAN_RESULTS = 25;
   WiFiNetworkInfo scanResults[MAX_SCAN_RESULTS];
