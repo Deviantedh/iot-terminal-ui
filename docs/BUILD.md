@@ -72,7 +72,8 @@ arduino-cli compile --fqbn esp8266:esp8266:nodemcuv2 --verbose .
 3. Open the project folder or `iot_terminal_ui.ino`.
 4. Select board `NodeMCU 1.0 (ESP-12E Module)`.
 5. Keep CPU frequency at `80 MHz`.
-6. Build or upload normally.
+6. Set MMU to `16KB cache + 48KB IRAM (IRAM)`.
+7. Build or upload normally.
 
 ## Project-specific notes
 
@@ -91,6 +92,7 @@ arduino-cli compile --fqbn esp8266:esp8266:nodemcuv2 --verbose .
   - short `POWER` -> `ST7789 Display OFF + Sleep In` -> wake back to previous screen
   - long `POWER` -> pseudo-off standby -> wake to `HOME`
   - physical `MENU` -> safe jump to `HOME`
+- On boards with fixed backlight power, the firmware prefers a stable black-frame sleep fallback over a visually white controller-off panel.
 - Wake from standby restarts the existing non-blocking Wi-Fi auto-connect flow if saved credentials or built-in fallback networks are available.
 - Wi-Fi credentials are stored in LittleFS at `/wifi_credentials.txt`.
 - Built-in fallback Wi-Fi networks are defined in `WiFiProfiles.cpp` and should be reviewed per device/project handoff.
@@ -98,3 +100,6 @@ arduino-cli compile --fqbn esp8266:esp8266:nodemcuv2 --verbose .
 - The UI uses partial redraw and profiling already; avoid large redraw refactors unless necessary.
 - `GAME` content is still intentionally placeholder-only; only the balance entry point is wired.
 - `GPIO16` is acceptable for the current buzzer output path, but keep in mind its usual ESP8266 limitations outside this use case.
+- Recommended Arduino IDE MMU option is `16KB cache + 48KB IRAM (IRAM)`.
+- Reason: on-device testing reduced IRAM pressure from roughly `94%` to about `70%` and did not show visible UI slowdown.
+- Expected tradeoff: less instruction cache for flash-resident code, so this should still be verified after major future feature additions, but it is the current recommended setting.

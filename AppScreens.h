@@ -88,11 +88,13 @@ enum AppUiStatusLevel : uint8_t {
 
 enum AppEventType : uint8_t {
   APP_EVENT_NONE = 0,
+  // Internal service / hardware events produced by the platform itself.
   APP_EVENT_WIFI_CONNECTED,
   APP_EVENT_WIFI_DISCONNECTED,
   APP_EVENT_BUTTON_MENU,
   APP_EVENT_BUTTON_POWER_SHORT,
   APP_EVENT_BUTTON_POWER_LONG,
+  // External integration events that game/server code may post safely.
   APP_EVENT_BALANCE_UPDATED,
   APP_EVENT_EXTERNAL_MESSAGE,
   APP_EVENT_SHOW_NOTIFICATION,
@@ -105,6 +107,8 @@ enum PowerMode : uint8_t {
   POWER_MODE_SLEEP,
   POWER_MODE_STANDBY
 };
+
+static const uint8_t APP_EVENT_QUEUE_CAPACITY = 6;
 
 struct AppEvent {
   AppEventType type;
@@ -121,6 +125,8 @@ struct AppState {
   int balanceValue;
   int winsCount;
   bool soundEnabled;
+  int32_t gameStateValue;
+  char gameStateText[33];
 
   // Wi-Fi credentials and editor draft buffer.
   char ssid[33];
@@ -185,7 +191,7 @@ struct AppState {
   char uiBusyText[17];
 
   // Fixed-size event queue to avoid dynamic allocation.
-  AppEvent eventQueue[6];
+  AppEvent eventQueue[APP_EVENT_QUEUE_CAPACITY];
   uint8_t eventHead;
   uint8_t eventTail;
 
@@ -203,7 +209,8 @@ struct AppState {
   bool gameCacheValid;
 };
 
-// AppState is the main integration point for future app/game/server state.
+// AppState is the central UI/runtime container.
+// External modules should prefer AppIntegration.h over direct field mutation.
 // Keep transport services outside this struct and expose only UI-relevant state here.
 
 void initAppState(AppState& app);
@@ -233,6 +240,9 @@ void appUiSwitchScreen(AppState& app, ScreenState screen);
 // Lightweight event queue for future integration.
 bool appPostEvent(AppState& app, AppEventType type, int32_t value = 0, const char* text = nullptr);
 bool appConsumeEvent(AppState& app, AppEvent& out);
+bool appEventIsExternal(AppEventType type);
+bool appEventIsInternal(AppEventType type);
+const char* appEventName(AppEventType type);
 
 // Runtime diagnostics / idle helpers.
 void appSetDebugMode(AppState& app, bool enabled);

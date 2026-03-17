@@ -35,6 +35,7 @@ private:
   int8_t backlightPin;
   BacklightLevel currentBacklightLevel;
   bool displaySleeping;
+  bool controllerSleepActive;
 
   int touchToScreenX(int rawY);
   int touchToScreenY(int rawX);

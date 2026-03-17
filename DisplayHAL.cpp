@@ -4,6 +4,10 @@ static const uint8_t ST7789_CMD_SLEEP_IN = 0x10;
 static const uint8_t ST7789_CMD_SLEEP_OUT = 0x11;
 static const uint8_t ST7789_CMD_DISPLAY_OFF = 0x28;
 static const uint8_t ST7789_CMD_DISPLAY_ON = 0x29;
+static const bool ST7789_COLOR_INVERSION_ENABLED = false;
+static const unsigned long ST7789_BLACK_FRAME_SETTLE_MS = 18;
+static const unsigned long ST7789_DISPLAY_OFF_DELAY_MS = 20;
+static const unsigned long ST7789_SLEEP_DELAY_MS = 120;
 
 static int medianOf5(int values[5]) {
   for (int i = 1; i < 5; i++) {
@@ -24,13 +28,16 @@ DisplayHAL::DisplayHAL(uint8_t touchCs, uint8_t touchIrq, int8_t backlightPinVal
     touchLatched(false),
     backlightPin(backlightPinValue),
     currentBacklightLevel(BACKLIGHT_NORMAL),
-    displaySleeping(false) {
+    displaySleeping(false),
+    controllerSleepActive(false) {
 }
 
 void DisplayHAL::begin() {
   tft.init();
   tft.setRotation(1);
+  tft.invertDisplay(ST7789_COLOR_INVERSION_ENABLED);
   displaySleeping = false;
+  controllerSleepActive = false;
 
   ts.begin();
   ts.setRotation(1);
@@ -48,10 +55,20 @@ void DisplayHAL::displaySleepOn() {
     return;
   }
 
+  // Keep the last visible frame black before any controller power command.
+  // On boards with fixed backlight power, this is the only stable way to
+  // guarantee a black-looking sleep screen.
+  tft.fillScreen(TFT_BLACK);
+  delay(ST7789_BLACK_FRAME_SETTLE_MS);
+
+  controllerSleepActive = false;
+  if (backlightControlSupported()) {
   tft.writecommand(ST7789_CMD_DISPLAY_OFF);
-  delay(20);
+    delay(ST7789_DISPLAY_OFF_DELAY_MS);
   tft.writecommand(ST7789_CMD_SLEEP_IN);
-  delay(120);
+    delay(ST7789_SLEEP_DELAY_MS);
+    controllerSleepActive = true;
+  }
   displaySleeping = true;
 }
 
@@ -60,10 +77,15 @@ void DisplayHAL::displaySleepOff() {
     return;
   }
 
-  tft.writecommand(ST7789_CMD_SLEEP_OUT);
-  delay(120);
-  tft.writecommand(ST7789_CMD_DISPLAY_ON);
-  delay(20);
+  if (controllerSleepActive) {
+    tft.writecommand(ST7789_CMD_SLEEP_OUT);
+    delay(ST7789_SLEEP_DELAY_MS);
+    tft.writecommand(ST7789_CMD_DISPLAY_ON);
+    delay(ST7789_DISPLAY_OFF_DELAY_MS);
+    tft.invertDisplay(ST7789_COLOR_INVERSION_ENABLED);
+    controllerSleepActive = false;
+  }
+
   displaySleeping = false;
 }
 
@@ -82,6 +104,10 @@ int DisplayHAL::touchToScreenY(int rawX) {
 }
 
 bool DisplayHAL::readTouch(int &tx, int &ty) {
+  if (!ts.tirqTouched()) {
+    return false;
+  }
+
   if (!ts.touched()) {
     return false;
   }
@@ -104,6 +130,11 @@ bool DisplayHAL::readTouch(int &tx, int &ty) {
 }
 
 bool DisplayHAL::getTap(int &tx, int &ty) {
+  if (!ts.tirqTouched()) {
+    touchLatched = false;
+    return false;
+  }
+
   if (!ts.touched()) {
     touchLatched = false;
     return false;
@@ -122,7 +153,7 @@ bool DisplayHAL::getTap(int &tx, int &ty) {
 }
 
 void DisplayHAL::waitTouchRelease() {
-  while (ts.touched()) {
+  while (ts.tirqTouched() || ts.touched()) {
     delay(10);
   }
 }

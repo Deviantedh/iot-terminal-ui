@@ -37,6 +37,7 @@
 
 3. Confirm project-local TFT setup and SPI frequency.
    Current stable display SPI clock is `40000000`.
+   Recommended Arduino IDE MMU option is `16KB cache + 48KB IRAM (IRAM)`.
 4. Review deployment-specific Wi-Fi built-ins in `WiFiProfiles.cpp`.
 5. Build/upload with the same board core version and external library versions.
 

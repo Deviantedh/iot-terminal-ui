@@ -1,5 +1,16 @@
 #include "SimpleUI.h"
 
+static constexpr uint16_t rgb565(uint8_t r, uint8_t g, uint8_t b) {
+  return ((uint16_t)(r & 0xF8) << 8) | ((uint16_t)(g & 0xFC) << 3) | (b >> 3);
+}
+
+static const uint16_t UI_BG = rgb565(15, 18, 24);
+static const uint16_t UI_BORDER = rgb565(92, 102, 116);
+static const uint16_t UI_BORDER_SOFT = rgb565(56, 64, 76);
+static const uint16_t UI_TEXT = rgb565(236, 238, 242);
+static const uint16_t UI_TEXT_MUTED = rgb565(168, 177, 189);
+static const uint16_t UI_KNOB = rgb565(246, 247, 250);
+
 static void drawFastFrame(TFT_eSPI& tft, int x, int y, int w, int h,
                           uint16_t fillColor, uint16_t borderColor) {
   tft.fillRect(x, y, w, h, fillColor);
@@ -17,16 +28,18 @@ void SimpleUI::drawCenteredText(const char* text, int centerX, int centerY,
   tft.setTextDatum(MC_DATUM);
   tft.drawString(text, centerX, centerY);
   tft.setTextDatum(TL_DATUM);
+  tft.setTextSize(1);
 }
 
 void SimpleUI::drawTitle(const char* text, uint16_t color) {
-  drawCenteredText(text, 160, 20, color, TFT_BLACK, 2);
+  drawCenteredText(text, 160, 20, color, UI_BG, 2);
 }
 
 void SimpleUI::drawHeaderBar(const char* title, uint16_t titleColor) {
-  tft.fillRect(0, 0, 320, 36, TFT_BLACK);
-  tft.drawFastHLine(0, 35, 320, TFT_WHITE);
-  drawCenteredText(title, 160, 18, titleColor, TFT_BLACK, 2);
+  tft.fillRect(0, 0, 320, 36, UI_BG);
+  tft.drawFastHLine(0, 35, 320, UI_BORDER);
+  tft.drawFastHLine(0, 34, 320, UI_BORDER_SOFT);
+  drawCenteredText(title, 160, 18, titleColor, UI_BG, 2);
 }
 
 void SimpleUI::drawPanel(int x, int y, int w, int h, uint16_t fillColor, uint16_t borderColor) {
@@ -34,16 +47,16 @@ void SimpleUI::drawPanel(int x, int y, int w, int h, uint16_t fillColor, uint16_
 }
 
 void SimpleUI::drawButton(const UIButton& btn, uint16_t fillColor) {
-  drawFastFrame(tft, btn.x, btn.y, btn.w, btn.h, fillColor, TFT_WHITE);
+  drawFastFrame(tft, btn.x, btn.y, btn.w, btn.h, fillColor, UI_BORDER);
   if (btn.h >= 18) {
-    tft.drawFastHLine(btn.x + 2, btn.y + 2, btn.w - 4, TFT_DARKGREY);
+    tft.drawFastHLine(btn.x + 2, btn.y + 2, btn.w - 4, UI_BORDER_SOFT);
   }
 
   drawCenteredText(
     btn.text,
     btn.x + btn.w / 2,
     btn.y + btn.h / 2,
-    TFT_WHITE,
+    UI_TEXT,
     fillColor,
     2
   );
@@ -59,7 +72,7 @@ void SimpleUI::pressButton(const UIButton& btn) {
 
 void SimpleUI::drawValueCard(const UIValueCard& card) {
   drawFastFrame(tft, card.x, card.y, card.w, card.h, card.fillColor, card.borderColor);
-  tft.drawFastHLine(card.x + 1, card.y + 16, card.w - 2, TFT_DARKGREY);
+  tft.drawFastHLine(card.x + 1, card.y + 16, card.w - 2, UI_BORDER_SOFT);
 
   tft.setTextDatum(TL_DATUM);
   tft.setTextSize(1);
@@ -99,8 +112,8 @@ void SimpleUI::drawToggleValue(const UIToggle& toggle, bool value) {
   drawFastFrame(tft, sx, sy, sw, sh, value ? toggle.onColor : toggle.offColor, toggle.borderColor);
 
   const int knobX = value ? (sx + sw - knob - 4) : (sx + 4);
-  tft.fillRect(knobX, sy + 4, knob, knob, TFT_WHITE);
-  tft.drawRect(knobX, sy + 4, knob, knob, TFT_DARKGREY);
+  tft.fillRect(knobX, sy + 4, knob, knob, UI_KNOB);
+  tft.drawRect(knobX, sy + 4, knob, knob, UI_BORDER_SOFT);
 }
 
 bool SimpleUI::toggleHit(const UIToggle& toggle, int tx, int ty, int padding) {

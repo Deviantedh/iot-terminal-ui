@@ -90,7 +90,8 @@ void loop() {
     if (wakeRequested && displayHal.displayIsSleeping()) {
       displayHal.displaySleepOff();
     }
-    if (buttonEvents & PCF8574_BUTTON_EVENT_MENU) {
+    if ((buttonEvents & PCF8574_BUTTON_EVENT_MENU) &&
+        app.powerMode == POWER_MODE_NORMAL) {
       buzzer.playClick();
       appPostEvent(app, APP_EVENT_BUTTON_MENU, 0, "MENU");
     }
@@ -102,9 +103,16 @@ void loop() {
     }
   }
 
-  int tx, ty;
-  bool touching = displayHal.readTouch(tx, ty);
-  updateTouchState(app, touching, tx, ty);
+  int tx = 0;
+  int ty = 0;
+  if (appIsSleeping(app)) {
+    // Hard gate touch in sleep/standby: no IRQ probing, no SPI touch reads,
+    // no tap events and no wake-from-touch path.
+    updateTouchState(app, false, 0, 0);
+  } else {
+    const bool touching = displayHal.readTouch(tx, ty);
+    updateTouchState(app, touching, tx, ty);
+  }
 
   if (!appIsSleeping(app) && displayHal.getTap(tx, ty)) {
 #if APP_SERIAL_LOGGING_ENABLED
@@ -129,10 +137,10 @@ void loop() {
   }
 
   if (previousPowerMode != app.powerMode) {
-    if (app.powerMode == POWER_MODE_NORMAL) {
+    if (app.powerMode == POWER_MODE_NORMAL && previousPowerMode == POWER_MODE_STANDBY) {
+      buzzer.playBootMelody();
+    } else if (app.powerMode == POWER_MODE_NORMAL) {
       buzzer.playWake();
-    } else {
-      buzzer.playSleep();
     }
   }
 

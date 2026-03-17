@@ -46,5 +46,8 @@ Sleep behavior now also uses ST7789 controller commands through `DisplayHAL`:
 - `Sleep Out` + `Display ON` when waking
 
 This avoids relying on `fillScreen(TFT_BLACK)` alone for screen-off behavior.
+On the current hardware, a fixed-power backlight can still make controller-off
+state look white, so the firmware keeps a black-frame visual fallback and only
+uses controller sleep where it stays visually stable.
 
 This change is now per-project, not machine-global.

@@ -9,6 +9,10 @@
 #define APP_SERIAL_LOGGING_ENABLED 0
 #endif
 
+static constexpr uint16_t rgb565(uint8_t r, uint8_t g, uint8_t b) {
+  return ((uint16_t)(r & 0xF8) << 8) | ((uint16_t)(g & 0xFC) << 3) | (b >> 3);
+}
+
 static const unsigned long TOUCH_DEBOUNCE = 180;
 static const unsigned long BUTTON_ANIM_MS = 80;
 static const unsigned long PROFILE_PRINT_INTERVAL_MS = 1000;
@@ -28,6 +32,32 @@ static const int IDLE_DIM_X = 0;
 static const int IDLE_DIM_Y = 220;
 static const int IDLE_DIM_W = 112;
 static const int IDLE_DIM_H = 16;
+
+// ---------------------------
+// Visual palette
+// ---------------------------
+static const uint16_t UI_BG = rgb565(15, 18, 24);
+static const uint16_t UI_PANEL = rgb565(28, 34, 43);
+static const uint16_t UI_PANEL_ALT = rgb565(34, 41, 52);
+static const uint16_t UI_BORDER = rgb565(92, 102, 116);
+static const uint16_t UI_BORDER_SOFT = rgb565(56, 64, 76);
+static const uint16_t UI_TEXT = rgb565(236, 238, 242);
+static const uint16_t UI_TEXT_MUTED = rgb565(168, 177, 189);
+static const uint16_t UI_ACCENT = rgb565(78, 178, 190);
+static const uint16_t UI_ACCENT_PRESSED = rgb565(60, 156, 168);
+static const uint16_t UI_SECONDARY = rgb565(109, 132, 170);
+static const uint16_t UI_SECONDARY_PRESSED = rgb565(90, 112, 148);
+static const uint16_t UI_SUCCESS = rgb565(118, 186, 138);
+static const uint16_t UI_SUCCESS_PRESSED = rgb565(96, 164, 118);
+static const uint16_t UI_WARNING = rgb565(220, 174, 92);
+static const uint16_t UI_WARNING_PRESSED = rgb565(198, 152, 74);
+static const uint16_t UI_ERROR = rgb565(210, 116, 122);
+static const uint16_t UI_ERROR_PRESSED = rgb565(188, 96, 102);
+static const uint16_t UI_INFO = rgb565(130, 170, 204);
+static const uint16_t UI_INFO_SOFT = rgb565(74, 92, 122);
+static const uint16_t UI_NEUTRAL = rgb565(72, 82, 96);
+static const uint16_t UI_NEUTRAL_PRESSED = rgb565(92, 102, 118);
+static const uint16_t UI_IDLE = rgb565(66, 72, 84);
 
 // ---------------------------
 // Layout
@@ -167,22 +197,22 @@ static const int GAME_BALANCE_H = 28;
 // ---------------------------
 // Buttons
 // ---------------------------
-static UIButton btnHomePlay = {HOME_PLAY_X, HOME_PLAY_Y, HOME_PLAY_W, HOME_PLAY_H, TFT_DARKGREEN, TFT_GREEN, "PLAY"};
-static UIButton btnHomeMenu = {HOME_MENU_X, HOME_MENU_Y, HOME_MENU_W, HOME_MENU_H, TFT_NAVY, TFT_BLUE, "MENU"};
-static UIButton btnMenuProfile = {50,  58, 220, 42, TFT_DARKCYAN, TFT_CYAN, "PROFILE"};
-static UIButton btnMenuTopUp   = {50, 112, 220, 42, TFT_DARKGREEN, TFT_GREEN, "TOP UP"};
-static UIButton btnMenuSettings = {50, 166, 220, 42, TFT_MAROON, TFT_RED, "SETTINGS"};
-static UIButton btnMenuHome = {MENU_BACK_X, MENU_BACK_Y, MENU_BACK_W, MENU_BACK_H, TFT_DARKGREY, TFT_LIGHTGREY, "HOME"};
-static UIButton btnBack     = {BACK_X, BACK_Y, BACK_W, BACK_H, TFT_DARKGREY, TFT_LIGHTGREY, "BACK"};
-static UIButton btnSettingsMainBack = {SETTINGS_MAIN_BACK_X, SETTINGS_MAIN_BACK_Y, SETTINGS_MAIN_BACK_W, SETTINGS_MAIN_BACK_H, TFT_DARKGREY, TFT_LIGHTGREY, "BACK"};
-static UIButton btnSettingsTouchDiag = {SETTINGS_MAIN_TOUCH_X, SETTINGS_MAIN_TOUCH_Y, SETTINGS_MAIN_TOUCH_W, SETTINGS_MAIN_TOUCH_H, TFT_DARKCYAN, TFT_CYAN, "TOUCH DIAGNOSTICS"};
-static UIButton btnWifiScan = {WIFI_SCAN_X, WIFI_SCAN_Y, WIFI_SCAN_W, WIFI_SCAN_H, TFT_DARKCYAN, TFT_CYAN, "SCAN NETWORKS"};
-static UIButton btnWifiConnect = {WIFI_CONNECT_X, WIFI_CONNECT_Y, WIFI_CONNECT_W, WIFI_CONNECT_H, TFT_DARKGREEN, TFT_GREEN, "CONNECT"};
-static UIButton btnWifiBack = {WIFI_BACK_X, WIFI_BACK_Y, WIFI_BACK_W, WIFI_BACK_H, TFT_DARKGREY, TFT_LIGHTGREY, "BACK"};
-static UIButton btnListPrev = {LIST_PREV_X, LIST_PREV_Y, LIST_PREV_W, LIST_PREV_H, TFT_DARKGREY, TFT_LIGHTGREY, "PREV"};
-static UIButton btnListNext = {LIST_NEXT_X, LIST_NEXT_Y, LIST_NEXT_W, LIST_NEXT_H, TFT_DARKGREY, TFT_LIGHTGREY, "NEXT"};
-static UIButton btnListBack = {LIST_BACK_X, LIST_BACK_Y, LIST_BACK_W, LIST_BACK_H, TFT_DARKGREY, TFT_LIGHTGREY, "BACK"};
-static UIButton btnTouchDiagBack = {TOUCH_DIAG_BACK_X, TOUCH_DIAG_BACK_Y, TOUCH_DIAG_BACK_W, TOUCH_DIAG_BACK_H, TFT_DARKGREY, TFT_LIGHTGREY, "BACK"};
+static UIButton btnHomePlay = {HOME_PLAY_X, HOME_PLAY_Y, HOME_PLAY_W, HOME_PLAY_H, UI_ACCENT, UI_ACCENT_PRESSED, "PLAY"};
+static UIButton btnHomeMenu = {HOME_MENU_X, HOME_MENU_Y, HOME_MENU_W, HOME_MENU_H, UI_SECONDARY, UI_SECONDARY_PRESSED, "MENU"};
+static UIButton btnMenuProfile = {42,  58, 236, 42, UI_PANEL_ALT, UI_SECONDARY_PRESSED, "PROFILE"};
+static UIButton btnMenuTopUp   = {42, 112, 236, 42, UI_PANEL_ALT, UI_SECONDARY_PRESSED, "TOP UP"};
+static UIButton btnMenuSettings = {42, 166, 236, 42, UI_PANEL_ALT, UI_SECONDARY_PRESSED, "SETTINGS"};
+static UIButton btnMenuHome = {MENU_BACK_X, MENU_BACK_Y, MENU_BACK_W, MENU_BACK_H, UI_NEUTRAL, UI_NEUTRAL_PRESSED, "HOME"};
+static UIButton btnBack     = {BACK_X, BACK_Y, BACK_W, BACK_H, UI_NEUTRAL, UI_NEUTRAL_PRESSED, "BACK"};
+static UIButton btnSettingsMainBack = {SETTINGS_MAIN_BACK_X, SETTINGS_MAIN_BACK_Y, SETTINGS_MAIN_BACK_W, SETTINGS_MAIN_BACK_H, UI_NEUTRAL, UI_NEUTRAL_PRESSED, "BACK"};
+static UIButton btnSettingsTouchDiag = {SETTINGS_MAIN_TOUCH_X, SETTINGS_MAIN_TOUCH_Y, SETTINGS_MAIN_TOUCH_W, SETTINGS_MAIN_TOUCH_H, UI_PANEL_ALT, UI_SECONDARY_PRESSED, "TOUCH DIAGNOSTICS"};
+static UIButton btnWifiScan = {WIFI_SCAN_X, WIFI_SCAN_Y, WIFI_SCAN_W, WIFI_SCAN_H, UI_PANEL_ALT, UI_SECONDARY_PRESSED, "SCAN NETWORKS"};
+static UIButton btnWifiConnect = {WIFI_CONNECT_X, WIFI_CONNECT_Y, WIFI_CONNECT_W, WIFI_CONNECT_H, UI_SUCCESS, UI_SUCCESS_PRESSED, "CONNECT"};
+static UIButton btnWifiBack = {WIFI_BACK_X, WIFI_BACK_Y, WIFI_BACK_W, WIFI_BACK_H, UI_NEUTRAL, UI_NEUTRAL_PRESSED, "BACK"};
+static UIButton btnListPrev = {LIST_PREV_X, LIST_PREV_Y, LIST_PREV_W, LIST_PREV_H, UI_NEUTRAL, UI_NEUTRAL_PRESSED, "PREV"};
+static UIButton btnListNext = {LIST_NEXT_X, LIST_NEXT_Y, LIST_NEXT_W, LIST_NEXT_H, UI_NEUTRAL, UI_NEUTRAL_PRESSED, "NEXT"};
+static UIButton btnListBack = {LIST_BACK_X, LIST_BACK_Y, LIST_BACK_W, LIST_BACK_H, UI_NEUTRAL, UI_NEUTRAL_PRESSED, "BACK"};
+static UIButton btnTouchDiagBack = {TOUCH_DIAG_BACK_X, TOUCH_DIAG_BACK_Y, TOUCH_DIAG_BACK_W, TOUCH_DIAG_BACK_H, UI_NEUTRAL, UI_NEUTRAL_PRESSED, "BACK"};
 
 static OnScreenKeyboard* keyboard = nullptr;
 static WiFiService wifiService;
@@ -210,28 +240,28 @@ static unsigned long debugPrintIntervalMs(const AppState& app);
 
 static void configureWifiPrimaryButton(const AppState& app) {
   if (app.wifiFlowState == WIFI_FLOW_CONNECTED) {
-    btnWifiConnect.color = TFT_MAROON;
-    btnWifiConnect.pressedColor = TFT_RED;
+    btnWifiConnect.color = UI_ERROR;
+    btnWifiConnect.pressedColor = UI_ERROR_PRESSED;
     btnWifiConnect.text = "DISCONNECT";
     return;
   }
 
   if (app.wifiFlowState == WIFI_FLOW_ERROR || app.wifiFlowState == WIFI_FLOW_RETRY_WAIT) {
-    btnWifiConnect.color = TFT_BROWN;
-    btnWifiConnect.pressedColor = TFT_ORANGE;
+    btnWifiConnect.color = UI_WARNING;
+    btnWifiConnect.pressedColor = UI_WARNING_PRESSED;
     btnWifiConnect.text = "RETRY";
     return;
   }
 
   if (app.wifiFlowState == WIFI_FLOW_CONNECTING) {
-    btnWifiConnect.color = TFT_DARKGREY;
-    btnWifiConnect.pressedColor = TFT_LIGHTGREY;
+    btnWifiConnect.color = UI_NEUTRAL;
+    btnWifiConnect.pressedColor = UI_NEUTRAL_PRESSED;
     btnWifiConnect.text = "WAIT";
     return;
   }
 
-  btnWifiConnect.color = TFT_DARKGREEN;
-  btnWifiConnect.pressedColor = TFT_GREEN;
+  btnWifiConnect.color = UI_SUCCESS;
+  btnWifiConnect.pressedColor = UI_SUCCESS_PRESSED;
   btnWifiConnect.text = "CONNECT";
 }
 
@@ -405,11 +435,11 @@ static const char* settingsViewName(SettingsViewState view) {
 
 static uint16_t uiStatusLevelColor(AppUiStatusLevel level) {
   switch (level) {
-    case APP_UI_STATUS_INFO: return TFT_CYAN;
-    case APP_UI_STATUS_ERROR: return TFT_RED;
-    case APP_UI_STATUS_BUSY: return TFT_YELLOW;
+    case APP_UI_STATUS_INFO: return UI_INFO;
+    case APP_UI_STATUS_ERROR: return UI_ERROR;
+    case APP_UI_STATUS_BUSY: return UI_WARNING;
   }
-  return TFT_CYAN;
+  return UI_INFO;
 }
 
 static const char* activeUiOverlayText(const AppState& app) {
@@ -430,10 +460,10 @@ static const char* activeUiOverlayText(const AppState& app) {
 
 static uint16_t activeUiOverlayColor(const AppState& app) {
   if (app.powerMode == POWER_MODE_STANDBY) {
-    return TFT_RED;
+    return UI_WARNING;
   }
   if (app.powerMode == POWER_MODE_SLEEP) {
-    return TFT_ORANGE;
+    return UI_TEXT_MUTED;
   }
   if (app.uiBusy) {
     return uiStatusLevelColor(APP_UI_STATUS_BUSY);
@@ -441,34 +471,34 @@ static uint16_t activeUiOverlayColor(const AppState& app) {
   if (app.uiStatusVisible) {
     return uiStatusLevelColor(app.uiStatusLevel);
   }
-  return TFT_BLACK;
+  return UI_BG;
 }
 
 static void drawUiOverlay(TFT_eSPI& tft, const AppState& app) {
-  tft.fillRect(IDLE_DIM_X, IDLE_DIM_Y, IDLE_DIM_W, IDLE_DIM_H, TFT_BLACK);
+  tft.fillRect(IDLE_DIM_X, IDLE_DIM_Y, IDLE_DIM_W, IDLE_DIM_H, UI_BG);
 
   if (app.idleMode) {
     // Cheap idle indicator instead of a full-screen dimming pass.
-    tft.fillRect(IDLE_DIM_X, IDLE_DIM_Y, IDLE_DIM_W, IDLE_DIM_H, TFT_DARKGREY);
+    tft.fillRect(IDLE_DIM_X, IDLE_DIM_Y, IDLE_DIM_W, IDLE_DIM_H, UI_IDLE);
     tft.setTextDatum(MC_DATUM);
-    tft.setTextColor(TFT_LIGHTGREY, TFT_DARKGREY);
+    tft.setTextColor(UI_TEXT_MUTED, UI_IDLE);
     tft.drawString("IDLE", IDLE_DIM_X + IDLE_DIM_W / 2, IDLE_DIM_Y + IDLE_DIM_H / 2, 2);
     tft.setTextDatum(TL_DATUM);
   }
 
   const char* text = activeUiOverlayText(app);
   if (text == nullptr || text[0] == '\0') {
-    tft.fillRect(UI_OVERLAY_X, UI_OVERLAY_Y, UI_OVERLAY_W, UI_OVERLAY_H, TFT_BLACK);
+    tft.fillRect(UI_OVERLAY_X, UI_OVERLAY_Y, UI_OVERLAY_W, UI_OVERLAY_H, UI_BG);
     return;
   }
 
   // The old top-right reserved box was the source of the visible rectangle artifact.
   // Status messages now live in a bottom strip so full-screen layouts keep their own backgrounds.
-  tft.fillRect(UI_OVERLAY_X, UI_OVERLAY_Y, UI_OVERLAY_W, UI_OVERLAY_H, TFT_BLACK);
+  tft.fillRect(UI_OVERLAY_X, UI_OVERLAY_Y, UI_OVERLAY_W, UI_OVERLAY_H, UI_BG);
   char overlayText[20];
   fitTextWithEllipsis(tft, text, overlayText, sizeof(overlayText), UI_OVERLAY_W - 8);
   tft.setTextDatum(ML_DATUM);
-  tft.setTextColor(activeUiOverlayColor(app), TFT_BLACK);
+  tft.setTextColor(activeUiOverlayColor(app), UI_BG);
   tft.setTextSize(1);
   tft.drawString(overlayText, UI_OVERLAY_X + 6, UI_OVERLAY_Y + UI_OVERLAY_H / 2, 2);
   tft.setTextDatum(TL_DATUM);
@@ -618,32 +648,32 @@ static const char* getWifiStatusText(const AppState& app) {
 static uint16_t getWifiStatusColor(const AppState& app) {
   switch (app.wifiFlowState) {
     case WIFI_FLOW_IDLE:
-      return TFT_DARKGREY;
+      return UI_NEUTRAL;
     case WIFI_FLOW_DISCONNECTED:
-      return TFT_DARKGREY;
+      return UI_NEUTRAL;
     case WIFI_FLOW_EDITING_SSID:
     case WIFI_FLOW_EDITING_PASSWORD:
-      return TFT_NAVY;
+      return UI_INFO_SOFT;
     case WIFI_FLOW_READY_TO_CONNECT:
-      return TFT_BROWN;
+      return UI_WARNING;
     case WIFI_FLOW_SCANNING:
-      return TFT_DARKCYAN;
+      return UI_ACCENT;
     case WIFI_FLOW_NETWORK_LIST:
-      return TFT_NAVY;
+      return UI_INFO_SOFT;
     case WIFI_FLOW_NO_NETWORKS:
-      return TFT_DARKGREY;
+      return UI_NEUTRAL;
     case WIFI_FLOW_SCAN_ERROR:
-      return TFT_MAROON;
+      return UI_ERROR;
     case WIFI_FLOW_RETRY_WAIT:
-      return TFT_BROWN;
+      return UI_WARNING;
     case WIFI_FLOW_CONNECTING:
-      return TFT_DARKCYAN;
+      return UI_ACCENT;
     case WIFI_FLOW_CONNECTED:
-      return TFT_DARKGREEN;
+      return UI_SUCCESS;
     case WIFI_FLOW_ERROR:
-      return TFT_MAROON;
+      return UI_ERROR;
   }
-  return TFT_DARKGREY;
+  return UI_NEUTRAL;
 }
 
 static int networkPageCount() {
@@ -659,16 +689,16 @@ static void drawNetworkPageLabel(TFT_eSPI& tft, SimpleUI& ui, AppState& app) {
   if (app.networkListCacheValid && app.lastDrawnNetworkPage == app.networkPage) {
     return;
   }
-  tft.fillRect(106, 170, 108, 14, TFT_BLACK);
+  tft.fillRect(106, 170, 108, 14, UI_BG);
   char pageTxt[24];
   snprintf(pageTxt, sizeof(pageTxt), "Page %d/%d", app.networkPage + 1, pages);
-  ui.drawCenteredText(pageTxt, 160, 178, TFT_LIGHTGREY, TFT_BLACK, 1);
+  ui.drawCenteredText(pageTxt, 160, 178, UI_TEXT_MUTED, UI_BG, 1);
   app.lastDrawnNetworkPage = app.networkPage;
 }
 
 static void drawNetworkListBody(TFT_eSPI& tft, SimpleUI& ui, AppState& app, bool drawPageLabel) {
-  tft.fillRect(0, LIST_Y, SCREEN_W, 144, TFT_BLACK);
-  ui.drawHeaderBar("SELECT NETWORK", TFT_CYAN);
+  tft.fillRect(0, LIST_Y, SCREEN_W, 144, UI_BG);
+  ui.drawHeaderBar("SELECT NETWORK", UI_ACCENT);
 
   int total = wifiService.networkCount();
   int pages = networkPageCount();
@@ -682,7 +712,7 @@ static void drawNetworkListBody(TFT_eSPI& tft, SimpleUI& ui, AppState& app, bool
     int y = LIST_Y + i * (LIST_ROW_H + LIST_ROW_GAP);
 
     if (idx >= total) {
-      tft.drawRect(LIST_X, y, LIST_W, LIST_ROW_H, TFT_DARKGREY);
+      tft.drawRect(LIST_X, y, LIST_W, LIST_ROW_H, UI_BORDER_SOFT);
       continue;
     }
 
@@ -691,8 +721,8 @@ static void drawNetworkListBody(TFT_eSPI& tft, SimpleUI& ui, AppState& app, bool
       continue;
     }
 
-    tft.fillRect(LIST_X, y, LIST_W, LIST_ROW_H, TFT_BLACK);
-    tft.drawRect(LIST_X, y, LIST_W, LIST_ROW_H, TFT_WHITE);
+    tft.fillRect(LIST_X, y, LIST_W, LIST_ROW_H, UI_PANEL);
+    tft.drawRect(LIST_X, y, LIST_W, LIST_ROW_H, UI_BORDER);
 
     char rssiText[16];
     snprintf(rssiText, sizeof(rssiText), "%ddBm", (int)n->rssi);
@@ -712,16 +742,16 @@ static void drawNetworkListBody(TFT_eSPI& tft, SimpleUI& ui, AppState& app, bool
 
     int textX = LIST_X + leftPad;
     if (n->secured) {
-      tft.setTextColor(TFT_CYAN, TFT_BLACK);
+      tft.setTextColor(UI_ACCENT, UI_PANEL);
       tft.drawString("*", textX, rowMidY, 2);
       textX += secureMarkWidth;
     }
 
-    tft.setTextColor(TFT_WHITE, TFT_BLACK);
+    tft.setTextColor(UI_TEXT, UI_PANEL);
     tft.drawString(ssidText, textX, rowMidY, 2);
 
     tft.setTextDatum(MR_DATUM);
-    tft.setTextColor(TFT_LIGHTGREY, TFT_BLACK);
+    tft.setTextColor(UI_TEXT_MUTED, UI_PANEL);
     tft.drawString(rssiText, LIST_X + LIST_W - rightPad, rowMidY, 2);
     tft.setTextDatum(TL_DATUM);
   }
@@ -866,7 +896,7 @@ void appUiShowMessage(AppState& app, const char* text, uint16_t color, unsigned 
   }
   strncpy(app.uiStatusText, text, sizeof(app.uiStatusText) - 1);
   app.uiStatusText[sizeof(app.uiStatusText) - 1] = '\0';
-  app.uiStatusLevel = (color == TFT_RED) ? APP_UI_STATUS_ERROR : APP_UI_STATUS_INFO;
+  app.uiStatusLevel = (color == UI_ERROR) ? APP_UI_STATUS_ERROR : APP_UI_STATUS_INFO;
   app.uiStatusVisible = (app.uiStatusText[0] != '\0');
   app.uiStatusUntilMs = millis() + ((durationMs > 0) ? durationMs : UI_STATUS_DEFAULT_MS);
   markDirtyRegions(app, DIRTY_UI_OVERLAY);
@@ -907,7 +937,7 @@ void appUiSwitchScreen(AppState& app, ScreenState screen) {
 }
 
 bool appPostEvent(AppState& app, AppEventType type, int32_t value, const char* text) {
-  const uint8_t nextTail = (uint8_t)((app.eventTail + 1) % 6);
+  const uint8_t nextTail = (uint8_t)((app.eventTail + 1) % APP_EVENT_QUEUE_CAPACITY);
   if (nextTail == app.eventHead) {
     return false;
   }
@@ -931,8 +961,43 @@ bool appConsumeEvent(AppState& app, AppEvent& out) {
   }
 
   out = app.eventQueue[app.eventHead];
-  app.eventHead = (uint8_t)((app.eventHead + 1) % 6);
+  app.eventHead = (uint8_t)((app.eventHead + 1) % APP_EVENT_QUEUE_CAPACITY);
   return true;
+}
+
+bool appEventIsExternal(AppEventType type) {
+  switch (type) {
+    case APP_EVENT_BALANCE_UPDATED:
+    case APP_EVENT_EXTERNAL_MESSAGE:
+    case APP_EVENT_SHOW_NOTIFICATION:
+    case APP_EVENT_SHOW_ERROR:
+    case APP_EVENT_GAME_STATE_CHANGED:
+      return true;
+    default:
+      return false;
+  }
+}
+
+bool appEventIsInternal(AppEventType type) {
+  return type != APP_EVENT_NONE && !appEventIsExternal(type);
+}
+
+const char* appEventName(AppEventType type) {
+  switch (type) {
+    case APP_EVENT_NONE: return "NONE";
+    case APP_EVENT_WIFI_CONNECTED: return "WIFI_CONNECTED";
+    case APP_EVENT_WIFI_DISCONNECTED: return "WIFI_DISCONNECTED";
+    case APP_EVENT_BUTTON_MENU: return "BUTTON_MENU";
+    case APP_EVENT_BUTTON_POWER_SHORT: return "BUTTON_POWER_SHORT";
+    case APP_EVENT_BUTTON_POWER_LONG: return "BUTTON_POWER_LONG";
+    case APP_EVENT_BALANCE_UPDATED: return "BALANCE_UPDATED";
+    case APP_EVENT_EXTERNAL_MESSAGE: return "EXTERNAL_MESSAGE";
+    case APP_EVENT_SHOW_NOTIFICATION: return "SHOW_NOTIFICATION";
+    case APP_EVENT_SHOW_ERROR: return "SHOW_ERROR";
+    case APP_EVENT_GAME_STATE_CHANGED: return "GAME_STATE_CHANGED";
+  }
+
+  return "UNKNOWN";
 }
 
 void appSetDebugMode(AppState& app, bool enabled) {
@@ -1063,7 +1128,7 @@ static void wakeFromStandbyMode(AppState& app) {
 static void handlePostedEvent(AppState& app, const AppEvent& event) {
   switch (event.type) {
     case APP_EVENT_WIFI_CONNECTED:
-      appUiShowMessage(app, (event.text[0] != '\0') ? event.text : "WiFi connected", TFT_CYAN, 1800);
+      appUiShowMessage(app, (event.text[0] != '\0') ? event.text : "WiFi connected", UI_INFO, 1800);
       break;
     case APP_EVENT_WIFI_DISCONNECTED:
       appUiShowError(app, (event.text[0] != '\0') ? event.text : "WiFi disconnected", 2200);
@@ -1095,12 +1160,17 @@ static void handlePostedEvent(AppState& app, const AppEvent& event) {
       break;
     case APP_EVENT_EXTERNAL_MESSAGE:
     case APP_EVENT_SHOW_NOTIFICATION:
-      appUiShowMessage(app, event.text, TFT_CYAN, UI_STATUS_DEFAULT_MS);
+      appUiShowMessage(app, event.text, UI_INFO, UI_STATUS_DEFAULT_MS);
       break;
     case APP_EVENT_SHOW_ERROR:
       appUiShowError(app, event.text, 2500);
       break;
     case APP_EVENT_GAME_STATE_CHANGED:
+      app.gameStateValue = event.value;
+      strncpy(app.gameStateText, event.text, sizeof(app.gameStateText) - 1);
+      app.gameStateText[sizeof(app.gameStateText) - 1] = '\0';
+      noteInteraction(app);
+      break;
     case APP_EVENT_NONE:
       break;
   }
@@ -1194,9 +1264,11 @@ void initAppState(AppState& app) {
   app.balanceValue = 1000;
   app.winsCount = 0;
   app.soundEnabled = true;
+  app.gameStateValue = 0;
   app.ssid[0] = '\0';
   app.password[0] = '\0';
   app.keyboardDraft[0] = '\0';
+  app.gameStateText[0] = '\0';
   app.keyboardTarget = INPUT_TARGET_NONE;
   app.wifiFlowState = WIFI_FLOW_IDLE;
   app.settingsView = SETTINGS_VIEW_MAIN;
@@ -1229,9 +1301,9 @@ void initAppState(AppState& app) {
   app.lastDrawnPasswordMasked[0] = '\0';
   app.lastDrawnWifiFlowState = WIFI_FLOW_IDLE;
   app.lastDrawnWifiBadgeText[0] = '\0';
-  app.lastDrawnWifiBadgeColor = TFT_BLACK;
+  app.lastDrawnWifiBadgeColor = UI_BG;
   app.lastDrawnWifiActionText[0] = '\0';
-  app.lastDrawnWifiActionColor = TFT_BLACK;
+  app.lastDrawnWifiActionColor = UI_BG;
   app.lastDrawnNetworkPage = 0;
   app.networkListCacheValid = false;
   app.lastDrawnGameBalanceValue = INT32_MIN;
@@ -1277,16 +1349,16 @@ void initAppState(AppState& app) {
 // Base drawing
 // ---------------------------
 static void drawScreenBase(TFT_eSPI& tft) {
-  tft.fillScreen(TFT_BLACK);
+  tft.fillScreen(UI_BG);
   yield();
 }
 
 static void drawCard(SimpleUI& ui, int x, int y, int w, int h) {
-  ui.drawPanel(x, y, w, h, TFT_BLACK, TFT_WHITE);
+  ui.drawPanel(x, y, w, h, UI_PANEL, UI_BORDER);
 }
 
 static void clearValueArea(TFT_eSPI& tft, int x, int y, int w, int h) {
-  tft.fillRect(x, y, w, h, TFT_BLACK);
+  tft.fillRect(x, y, w, h, UI_PANEL);
 }
 
 static void drawGameBalanceEntry(TFT_eSPI& tft, SimpleUI& ui, AppState& app, bool force) {
@@ -1296,14 +1368,14 @@ static void drawGameBalanceEntry(TFT_eSPI& tft, SimpleUI& ui, AppState& app, boo
 
   char valueText[20];
   snprintf(valueText, sizeof(valueText), "$ %d", app.balanceValue);
-  tft.fillRect(GAME_BALANCE_X, GAME_BALANCE_Y, GAME_BALANCE_W, GAME_BALANCE_H, TFT_BLACK);
-  tft.drawRect(GAME_BALANCE_X, GAME_BALANCE_Y, GAME_BALANCE_W, GAME_BALANCE_H, TFT_WHITE);
-  tft.drawFastVLine(GAME_BALANCE_X + 34, GAME_BALANCE_Y + 3, GAME_BALANCE_H - 6, TFT_DARKGREY);
+  tft.fillRect(GAME_BALANCE_X, GAME_BALANCE_Y, GAME_BALANCE_W, GAME_BALANCE_H, UI_PANEL_ALT);
+  tft.drawRect(GAME_BALANCE_X, GAME_BALANCE_Y, GAME_BALANCE_W, GAME_BALANCE_H, UI_BORDER);
+  tft.drawFastVLine(GAME_BALANCE_X + 34, GAME_BALANCE_Y + 3, GAME_BALANCE_H - 6, UI_BORDER_SOFT);
   tft.setTextDatum(MC_DATUM);
-  tft.setTextColor(TFT_LIGHTGREY, TFT_BLACK);
+  tft.setTextColor(UI_TEXT_MUTED, UI_PANEL_ALT);
   tft.setTextSize(1);
   tft.drawString("BAL", GAME_BALANCE_X + 17, GAME_BALANCE_Y + GAME_BALANCE_H / 2, 2);
-  tft.setTextColor(TFT_WHITE, TFT_BLACK);
+  tft.setTextColor(UI_INFO, UI_PANEL_ALT);
   tft.drawString(valueText, GAME_BALANCE_X + 66, GAME_BALANCE_Y + GAME_BALANCE_H / 2, 2);
   tft.setTextDatum(TL_DATUM);
 
@@ -1317,10 +1389,13 @@ static void drawHomeTimeSection(TFT_eSPI& tft, SimpleUI& ui, AppState& app, bool
     return;
   }
 
-  tft.fillRect(HOME_TIME_X, HOME_TIME_Y - HOME_TIME_H / 2, HOME_TIME_W, HOME_TIME_H, TFT_NAVY);
-  ui.drawCenteredText(timeText, SCREEN_W / 2, HOME_TIME_Y, TFT_WHITE, TFT_NAVY, 4);
+  const int cardY = HOME_TIME_Y - HOME_TIME_H / 2;
+  tft.fillRect(HOME_TIME_X, cardY, HOME_TIME_W, HOME_TIME_H, UI_PANEL_ALT);
+  tft.drawRect(HOME_TIME_X, cardY, HOME_TIME_W, HOME_TIME_H, UI_BORDER);
+  tft.drawFastHLine(HOME_TIME_X + 2, cardY + 2, HOME_TIME_W - 4, UI_BORDER_SOFT);
+  ui.drawCenteredText(timeText, SCREEN_W / 2, HOME_TIME_Y, UI_TEXT, UI_PANEL_ALT, 4);
   ui.drawCenteredText(timeService.isTimeValid() ? "network time" : "waiting for NTP",
-                      SCREEN_W / 2, HOME_SUBTITLE_Y, TFT_CYAN, TFT_NAVY, 1);
+                      SCREEN_W / 2, HOME_SUBTITLE_Y, UI_TEXT_MUTED, UI_PANEL_ALT, 1);
   strncpy(app.lastDrawnHomeTime, timeText, sizeof(app.lastDrawnHomeTime) - 1);
   app.lastDrawnHomeTime[sizeof(app.lastDrawnHomeTime) - 1] = '\0';
   app.homeCacheValid = true;
@@ -1334,7 +1409,7 @@ static void updateBalanceValueCard(TFT_eSPI& tft, SimpleUI& ui, AppState& app, b
   UIValueCard card = {
     CARD_X, 60, CARD_W, CARD_H,
     "BALANCE", "",
-    TFT_BLACK, TFT_WHITE, TFT_LIGHTGREY, TFT_WHITE
+    UI_PANEL, UI_BORDER, UI_TEXT_MUTED, UI_TEXT
   };
 
   if (force || !app.balanceCacheValid || app.balanceValue != app.lastDrawnBalanceValue) {
@@ -1354,7 +1429,7 @@ static void updateWinsCard(TFT_eSPI& tft, SimpleUI& ui, AppState& app, bool forc
   UIValueCard card = {
     CARD_X, 118, CARD_W, CARD_H,
     "WINS", "",
-    TFT_BLACK, TFT_WHITE, TFT_LIGHTGREY, TFT_WHITE
+    UI_PANEL, UI_BORDER, UI_TEXT_MUTED, UI_TEXT
   };
 
   if (force || !app.balanceCacheValid || app.winsCount != app.lastDrawnWinsCount) {
@@ -1386,12 +1461,12 @@ static void updateMainSettingsWifiCard(TFT_eSPI& tft, SimpleUI& ui, AppState& ap
     return;
   }
 
-  tft.fillRect(SETTINGS_MAIN_WIFI_X, SETTINGS_MAIN_WIFI_Y, SETTINGS_MAIN_WIFI_W, SETTINGS_MAIN_WIFI_H, TFT_BLACK);
+  tft.fillRect(SETTINGS_MAIN_WIFI_X, SETTINGS_MAIN_WIFI_Y, SETTINGS_MAIN_WIFI_W, SETTINGS_MAIN_WIFI_H, UI_BG);
 
   UIValueCard wifiCard = {
     SETTINGS_MAIN_WIFI_X, SETTINGS_MAIN_WIFI_Y, SETTINGS_MAIN_WIFI_W, SETTINGS_MAIN_WIFI_H,
     "WiFi Settings", getSettingsWifiSummary(app),
-    TFT_BLACK, TFT_WHITE, TFT_LIGHTGREY, TFT_WHITE
+    UI_PANEL, UI_BORDER, UI_TEXT_MUTED, UI_TEXT
   };
   ui.drawValueCard(wifiCard);
 
@@ -1401,12 +1476,12 @@ static void updateMainSettingsWifiCard(TFT_eSPI& tft, SimpleUI& ui, AppState& ap
 }
 
 static void updateMainSettingsTouchCard(TFT_eSPI& tft, SimpleUI& ui) {
-  tft.fillRect(SETTINGS_MAIN_TOUCH_X, SETTINGS_MAIN_TOUCH_Y, SETTINGS_MAIN_TOUCH_W, SETTINGS_MAIN_TOUCH_H, TFT_BLACK);
+  tft.fillRect(SETTINGS_MAIN_TOUCH_X, SETTINGS_MAIN_TOUCH_Y, SETTINGS_MAIN_TOUCH_W, SETTINGS_MAIN_TOUCH_H, UI_BG);
 
   UIValueCard touchCard = {
     SETTINGS_MAIN_TOUCH_X, SETTINGS_MAIN_TOUCH_Y, SETTINGS_MAIN_TOUCH_W, SETTINGS_MAIN_TOUCH_H,
     "Touch Diagnostics", "Open service screen",
-    TFT_BLACK, TFT_WHITE, TFT_LIGHTGREY, TFT_WHITE
+    UI_PANEL, UI_BORDER, UI_TEXT_MUTED, UI_TEXT
   };
   ui.drawValueCard(touchCard);
 }
@@ -1415,7 +1490,7 @@ static void drawWifiStatusBadge(SimpleUI& ui, const AppState& app) {
   UIStatusBadge wifiBadge = {
     WIFI_STATUS_X, WIFI_STATUS_Y, WIFI_STATUS_W, WIFI_STATUS_H,
     getWifiStatusText(app),
-    getWifiStatusColor(app), TFT_WHITE, TFT_WHITE
+    getWifiStatusColor(app), UI_BORDER, UI_TEXT
   };
   ui.drawStatusBadge(wifiBadge);
 }
@@ -1463,19 +1538,19 @@ static void updateWifiForm(TFT_eSPI& tft, SimpleUI& ui, AppState& app, uint16_t 
   }
 
   if (force || credentialsChanged) {
-    tft.fillRect(WIFI_FIELD_X, WIFI_SSID_Y, WIFI_FIELD_W, 94, TFT_BLACK);
+    tft.fillRect(WIFI_FIELD_X, WIFI_SSID_Y, WIFI_FIELD_W, 94, UI_BG);
 
     UIValueCard ssidCard = {
       WIFI_FIELD_X, WIFI_SSID_Y, WIFI_FIELD_W, WIFI_FIELD_H,
       "SSID", (app.ssid[0] != '\0') ? app.ssid : "<tap to edit>",
-      TFT_BLACK, TFT_WHITE, TFT_LIGHTGREY, TFT_WHITE
+      UI_PANEL, UI_BORDER, UI_TEXT_MUTED, UI_TEXT
     };
     ui.drawValueCard(ssidCard);
 
     UIValueCard passCard = {
       WIFI_FIELD_X, WIFI_PASS_Y, WIFI_FIELD_W, WIFI_FIELD_H,
       "Password", (maskedPassword[0] != '\0') ? maskedPassword : "<tap to edit>",
-      TFT_BLACK, TFT_WHITE, TFT_LIGHTGREY, TFT_WHITE
+      UI_PANEL, UI_BORDER, UI_TEXT_MUTED, UI_TEXT
     };
     ui.drawValueCard(passCard);
   }
@@ -1508,11 +1583,11 @@ static void updateSoundCard(TFT_eSPI& tft, SimpleUI& ui, AppState& app, bool for
   UIToggle soundToggle = {
     SETTINGS_MAIN_SOUND_X, SETTINGS_MAIN_SOUND_Y, SETTINGS_MAIN_SOUND_W, SETTINGS_MAIN_SOUND_H,
     "Sound", app.soundEnabled,
-    TFT_BLACK, TFT_WHITE, TFT_WHITE, TFT_DARKGREEN, TFT_DARKGREY
+    UI_PANEL, UI_BORDER, UI_TEXT, UI_SUCCESS, UI_NEUTRAL
   };
   if (force || !app.settingsCacheValid) {
     tft.fillRect(SETTINGS_MAIN_SOUND_X, SETTINGS_MAIN_SOUND_Y,
-                 SETTINGS_MAIN_SOUND_W, SETTINGS_MAIN_SOUND_H, TFT_BLACK);
+                 SETTINGS_MAIN_SOUND_W, SETTINGS_MAIN_SOUND_H, UI_BG);
     ui.drawToggle(soundToggle);
   } else {
     // Hot path: only the switch value changes, the card label stays constant.
@@ -1532,20 +1607,20 @@ static bool touchInsideRect(const AppState& app, int x, int y, int w, int h) {
 
 static void drawTouchDiagnosticsTarget(TFT_eSPI& tft, const char* label,
                                        int x, int y, int w, int h, bool active) {
-  const uint16_t fill = active ? TFT_DARKGREEN : TFT_NAVY;
-  const uint16_t border = active ? TFT_GREEN : TFT_WHITE;
+  const uint16_t fill = active ? UI_SUCCESS : UI_PANEL_ALT;
+  const uint16_t border = active ? UI_ACCENT : UI_BORDER;
 
   tft.fillRect(x, y, w, h, fill);
   tft.drawRect(x, y, w, h, border);
   tft.setTextDatum(MC_DATUM);
   tft.setTextSize(1);
-  tft.setTextColor(TFT_WHITE, fill);
+  tft.setTextColor(UI_TEXT, fill);
   tft.drawString(label, x + w / 2, y + h / 2, 2);
   tft.setTextDatum(TL_DATUM);
 }
 
 static void drawTouchDiagnosticsScreen(TFT_eSPI& tft, SimpleUI& ui, AppState& app) {
-  tft.fillRect(0, 36, SCREEN_W, SCREEN_H - 36, TFT_BLACK);
+  tft.fillRect(0, 36, SCREEN_W, SCREEN_H - 36, UI_BG);
 
   char coordText[32];
   if (app.touchPressed) {
@@ -1557,11 +1632,11 @@ static void drawTouchDiagnosticsScreen(TFT_eSPI& tft, SimpleUI& ui, AppState& ap
   UIValueCard coordsCard = {
     TOUCH_DIAG_INFO_X, TOUCH_DIAG_INFO_Y, TOUCH_DIAG_INFO_W, TOUCH_DIAG_INFO_H,
     "Touch Coordinates", coordText,
-    TFT_BLACK, TFT_WHITE, TFT_LIGHTGREY, TFT_WHITE
+    UI_PANEL, UI_BORDER, UI_TEXT_MUTED, UI_TEXT
   };
   ui.drawValueCard(coordsCard);
 
-  tft.drawRect(TOUCH_SAFE_MARGIN_X, 96, SCREEN_W - TOUCH_SAFE_MARGIN_X * 2, 88, TFT_DARKGREY);
+  tft.drawRect(TOUCH_SAFE_MARGIN_X, 96, SCREEN_W - TOUCH_SAFE_MARGIN_X * 2, 88, UI_BORDER_SOFT);
   drawTouchDiagnosticsTarget(tft, "TL", TOUCH_DIAG_TL_X, TOUCH_DIAG_TOP_Y, TOUCH_DIAG_TARGET_W, TOUCH_DIAG_TARGET_H,
                              touchInsideRect(app, TOUCH_DIAG_TL_X, TOUCH_DIAG_TOP_Y, TOUCH_DIAG_TARGET_W, TOUCH_DIAG_TARGET_H));
   drawTouchDiagnosticsTarget(tft, "TR", TOUCH_DIAG_TR_X, TOUCH_DIAG_TOP_Y, TOUCH_DIAG_TARGET_W, TOUCH_DIAG_TARGET_H,
@@ -1576,9 +1651,9 @@ static void drawTouchDiagnosticsScreen(TFT_eSPI& tft, SimpleUI& ui, AppState& ap
                                              TOUCH_DIAG_CENTER_W, TOUCH_DIAG_CENTER_H));
 
   if (app.touchPressed) {
-    tft.drawFastVLine(app.touchScreenX, 96, 88, TFT_DARKCYAN);
-    tft.drawFastHLine(TOUCH_SAFE_MARGIN_X, app.touchScreenY, SCREEN_W - TOUCH_SAFE_MARGIN_X * 2, TFT_DARKCYAN);
-    tft.fillCircle(app.touchScreenX, app.touchScreenY, 3, TFT_YELLOW);
+    tft.drawFastVLine(app.touchScreenX, 96, 88, UI_ACCENT);
+    tft.drawFastHLine(TOUCH_SAFE_MARGIN_X, app.touchScreenY, SCREEN_W - TOUCH_SAFE_MARGIN_X * 2, UI_ACCENT);
+    tft.fillCircle(app.touchScreenX, app.touchScreenY, 3, UI_WARNING);
   }
 
   ui.drawButton(btnTouchDiagBack);
@@ -1642,18 +1717,19 @@ static void updateGameArea(TFT_eSPI& tft, SimpleUI& ui, AppState& app, bool forc
   }
 
   clearValueArea(tft, 32, 70, 256, 66);
-  ui.drawCenteredText("Here will be", SCREEN_W / 2, 92, TFT_WHITE, TFT_BLACK, 2);
-  ui.drawCenteredText("game screen", SCREEN_W / 2, 116, TFT_WHITE, TFT_BLACK, 2);
+  ui.drawCenteredText("Game area", SCREEN_W / 2, 92, UI_TEXT, UI_PANEL, 2);
+  ui.drawCenteredText("core mechanics unchanged", SCREEN_W / 2, 116, UI_TEXT_MUTED, UI_PANEL, 1);
   app.gameCacheValid = true;
 }
 
 static void drawHomeScreen(TFT_eSPI& tft, SimpleUI& ui) {
   drawScreenBase(tft);
-  tft.fillRect(HOME_BG_X, HOME_BG_Y, HOME_BG_W, HOME_BG_H, TFT_NAVY);
-  tft.drawRect(HOME_BG_X, HOME_BG_Y, HOME_BG_W, HOME_BG_H, TFT_CYAN);
-  tft.drawRect(HOME_BG_X + 4, HOME_BG_Y + 4, HOME_BG_W - 8, HOME_BG_H - 8, TFT_DARKCYAN);
-  ui.drawCenteredText("HOME", SCREEN_W / 2, 32, TFT_LIGHTGREY, TFT_NAVY, 1);
-  ui.drawCenteredText("background placeholder", SCREEN_W / 2, 122, TFT_CYAN, TFT_NAVY, 1);
+  tft.fillRect(HOME_BG_X, HOME_BG_Y, HOME_BG_W, HOME_BG_H, UI_PANEL);
+  tft.drawRect(HOME_BG_X, HOME_BG_Y, HOME_BG_W, HOME_BG_H, UI_BORDER);
+  tft.drawRect(HOME_BG_X + 5, HOME_BG_Y + 5, HOME_BG_W - 10, HOME_BG_H - 10, UI_BORDER_SOFT);
+  tft.drawFastHLine(HOME_BG_X + 16, HOME_BG_Y + 28, HOME_BG_W - 32, UI_BORDER_SOFT);
+  ui.drawCenteredText("HOME", SCREEN_W / 2, 34, UI_TEXT_MUTED, UI_PANEL, 1);
+  ui.drawCenteredText("device home screen", SCREEN_W / 2, 122, UI_TEXT_MUTED, UI_PANEL, 1);
   ui.drawButton(btnHomePlay);
   ui.drawButton(btnHomeMenu);
 }
@@ -1663,7 +1739,7 @@ static void drawHomeScreen(TFT_eSPI& tft, SimpleUI& ui) {
 // ---------------------------
 static void drawMenuScreen(TFT_eSPI& tft, SimpleUI& ui) {
   drawScreenBase(tft);
-  ui.drawHeaderBar("MENU", TFT_YELLOW);
+  ui.drawHeaderBar("MENU", UI_TEXT);
   yield();
 
   ui.drawButton(btnMenuProfile);
@@ -1678,7 +1754,7 @@ static void drawMenuScreen(TFT_eSPI& tft, SimpleUI& ui) {
 
 static void drawGameScreen(TFT_eSPI& tft, SimpleUI& ui, AppState& app) {
   drawScreenBase(tft);
-  ui.drawHeaderBar("GAME", TFT_GREEN);
+  ui.drawHeaderBar("GAME", UI_TEXT);
   yield();
 
   drawGameBalanceEntry(tft, ui, app, true);
@@ -1695,7 +1771,7 @@ static void drawGameScreen(TFT_eSPI& tft, SimpleUI& ui, AppState& app) {
 
 static void drawBalanceScreen(TFT_eSPI& tft, SimpleUI& ui, AppState& app) {
   drawScreenBase(tft);
-  ui.drawHeaderBar("BALANCE", TFT_CYAN);
+  ui.drawHeaderBar("BALANCE", UI_INFO);
   yield();
 
   updateBalanceRegions(tft, ui, app, DIRTY_BALANCE_CARD | DIRTY_WINS_CARD, true);
@@ -1709,10 +1785,11 @@ static void drawPlaceholderScreen(TFT_eSPI& tft, SimpleUI& ui, const char* title
   drawScreenBase(tft);
   ui.drawHeaderBar(title, accent);
   yield();
-  drawCard(ui, 28, 72, 264, 72);
+  drawCard(ui, 28, 72, 264, 82);
+  tft.drawFastHLine(44, 98, 232, UI_BORDER_SOFT);
   yield();
-  ui.drawCenteredText(line1, SCREEN_W / 2, 100, TFT_WHITE, TFT_BLACK, 2);
-  ui.drawCenteredText(line2, SCREEN_W / 2, 126, TFT_LIGHTGREY, TFT_BLACK, 1);
+  ui.drawCenteredText(line1, SCREEN_W / 2, 98, UI_TEXT, UI_PANEL, 2);
+  ui.drawCenteredText(line2, SCREEN_W / 2, 126, UI_TEXT_MUTED, UI_PANEL, 1);
   yield();
   ui.drawButton(btnBack);
   yield();
@@ -1733,8 +1810,8 @@ static void drawSettingsScreen(TFT_eSPI& tft, SimpleUI& ui, AppState& app) {
 
   if (app.settingsView == SETTINGS_VIEW_WIFI && app.wifiFlowState == WIFI_FLOW_SCANNING) {
     drawScreenBase(tft);
-    ui.drawHeaderBar("WIFI SETTINGS", TFT_CYAN);
-    ui.drawCenteredText("Scanning networks...", 160, 108, TFT_WHITE, TFT_BLACK, 2);
+    ui.drawHeaderBar("WIFI SETTINGS", UI_ACCENT);
+    ui.drawCenteredText("Scanning networks...", 160, 108, UI_TEXT, UI_BG, 2);
     ui.drawButton(btnListBack);
     yield();
     return;
@@ -1751,13 +1828,13 @@ static void drawSettingsScreen(TFT_eSPI& tft, SimpleUI& ui, AppState& app) {
       ui.drawButton(btnListNext);
       ui.drawButton(btnListBack);
     } else if (app.wifiFlowState == WIFI_FLOW_NO_NETWORKS) {
-      ui.drawHeaderBar("WIFI SETTINGS", TFT_CYAN);
-      ui.drawCenteredText("No networks found", 160, 104, TFT_WHITE, TFT_BLACK, 2);
+      ui.drawHeaderBar("WIFI SETTINGS", UI_ACCENT);
+      ui.drawCenteredText("No networks found", 160, 104, UI_TEXT, UI_BG, 2);
       ui.drawButton(btnWifiScan);
       ui.drawButton(btnListBack);
     } else {
-      ui.drawHeaderBar("WIFI SETTINGS", TFT_CYAN);
-      ui.drawCenteredText("Scan failed", 160, 104, TFT_WHITE, TFT_BLACK, 2);
+      ui.drawHeaderBar("WIFI SETTINGS", UI_ACCENT);
+      ui.drawCenteredText("Scan failed", 160, 104, UI_TEXT, UI_BG, 2);
       ui.drawButton(btnWifiScan);
       ui.drawButton(btnListBack);
     }
@@ -1767,13 +1844,13 @@ static void drawSettingsScreen(TFT_eSPI& tft, SimpleUI& ui, AppState& app) {
 
   drawScreenBase(tft);
   const char* title = "SETTINGS";
-  uint16_t titleColor = TFT_MAGENTA;
+  uint16_t titleColor = UI_TEXT;
   if (app.settingsView == SETTINGS_VIEW_WIFI) {
     title = "WIFI SETTINGS";
-    titleColor = TFT_CYAN;
+    titleColor = UI_ACCENT;
   } else if (app.settingsView == SETTINGS_VIEW_TOUCH_DIAGNOSTICS) {
     title = "TOUCH DIAGNOSTICS";
-    titleColor = TFT_YELLOW;
+    titleColor = UI_WARNING;
   }
   ui.drawHeaderBar(title, titleColor);
   yield();
@@ -1815,10 +1892,10 @@ void drawCurrentScreen(TFT_eSPI& tft, SimpleUI& ui, AppState& app) {
       drawSettingsScreen(tft, ui, app);
       break;
     case SCREEN_PROFILE:
-      drawPlaceholderScreen(tft, ui, "PROFILE", "Profile screen", "placeholder for future account data", TFT_CYAN);
+      drawPlaceholderScreen(tft, ui, "PROFILE", "Profile area", "account details coming later", UI_SECONDARY);
       break;
     case SCREEN_TOPUP:
-      drawPlaceholderScreen(tft, ui, "TOP UP", "Top up screen", "placeholder for future payment flow", TFT_GREEN);
+      drawPlaceholderScreen(tft, ui, "TOP UP", "Top up area", "payment flow coming later", UI_ACCENT);
       break;
   }
 }
@@ -2438,7 +2515,7 @@ void handleAppTouch(SimpleUI& ui, AppState& app, int tx, int ty) {
         UIToggle soundToggle = {
           SETTINGS_MAIN_SOUND_X, SETTINGS_MAIN_SOUND_Y, SETTINGS_MAIN_SOUND_W, SETTINGS_MAIN_SOUND_H,
           "Sound", app.soundEnabled,
-          TFT_BLACK, TFT_WHITE, TFT_WHITE, TFT_DARKGREEN, TFT_DARKGREY
+          UI_PANEL, UI_BORDER, UI_TEXT, UI_SUCCESS, UI_NEUTRAL
         };
         if (edgeAwareRectHit(ui, tx, ty, soundToggle.x, soundToggle.y, soundToggle.w, soundToggle.h, 8, 8)) {
           app.soundEnabled = !app.soundEnabled;

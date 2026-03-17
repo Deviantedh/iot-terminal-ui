@@ -24,6 +24,8 @@ later game integration and server-side logic.
   - reusable UI primitives and lightweight control drawing
 - `AppScreens`
   - app state, screen routing, redraw policy, profiling, Wi-Fi UX flow
+- `AppIntegration`
+  - safe external-facing API for game/server integration
 - `OnScreenKeyboard`
   - touch keyboard for SSID/password entry
 - `WiFiService`
@@ -62,15 +64,22 @@ Power behavior:
 - long `POWER`: pseudo-off standby, wake to `HOME` and restart non-blocking Wi-Fi auto-connect flow
 - physical `MENU`: safe jump to `HOME`
 
+Sleep display note:
+
+- the firmware now prefers a stable black sleep screen
+- on hardware without controllable backlight, the project keeps a black frame as the visual fallback because controller sleep alone can still look white on this panel wiring
+
 ## Build summary
 
 Main build instructions are in `docs/BUILD.md`.
+Integration notes are in `docs/INTEGRATION.md`.
 
 Short version:
 
 - board: `ESP8266 NodeMCU v3`
 - `arduino-cli` FQBN: `esp8266:esp8266:nodemcuv2`
 - CPU frequency: `80 MHz`
+- recommended MMU option: `16KB cache + 48KB IRAM (IRAM)`
 - current TFT SPI clock: `40000000`
 
 Required libraries:
@@ -142,6 +151,7 @@ on `TX/RX` as garbage characters. That is a wiring side effect, not firmware log
 
 - The project expects project-local TFT setup from `iot_terminal_ui.ino.globals.h`.
 - `iot_terminal_ui.ino` contains compile-time guards that fail the build if that setup is not injected.
+- Recommended Arduino IDE MMU mode is `16KB cache + 48KB IRAM (IRAM)`: on-device testing reduced IRAM pressure from roughly `94%` to about `70%` without visible UI slowdown.
 - `tools/print_project_dependencies.sh` supports autodetection and optional overrides through `ARDUINO_LIBRARIES_DIR` and `ARDUINO_DATA_DIR`.
 - Review built-in Wi-Fi fallback entries in `WiFiProfiles.cpp` before handing the project to another participant.
 - `GPIO16` works for simple buzzer output in the current implementation, but it still keeps the usual ESP8266 pin-16 limitations for other use cases such as interrupts/deep-sleep wake.
