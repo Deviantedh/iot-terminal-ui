@@ -10,6 +10,7 @@ enum ScreenState {
   SCREEN_GAME,
   SCREEN_BALANCE,
   SCREEN_SETTINGS,
+  SCREEN_TESTS,
   SCREEN_PROFILE,
   SCREEN_TOPUP
 };
@@ -17,7 +18,8 @@ enum ScreenState {
 enum SettingsViewState : uint8_t {
   SETTINGS_VIEW_MAIN = 0,
   SETTINGS_VIEW_WIFI,
-  SETTINGS_VIEW_TOUCH_DIAGNOSTICS
+  SETTINGS_VIEW_TOUCH_DIAGNOSTICS,
+  SETTINGS_VIEW_TESTS
 };
 
 enum ButtonAnimTarget {
@@ -38,6 +40,7 @@ enum PendingAction {
   ACTION_GOTO_GAME,
   ACTION_GOTO_BALANCE,
   ACTION_GOTO_SETTINGS,
+  ACTION_GOTO_TESTS,
   ACTION_GOTO_PROFILE,
   ACTION_GOTO_TOPUP
 };
@@ -205,6 +208,7 @@ struct AppState {
   unsigned long idleSinceMs;
   PowerMode powerMode;
   ScreenState balanceReturnScreen;
+  bool testSongRequested;
 
   bool gameCacheValid;
 };

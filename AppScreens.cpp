@@ -81,22 +81,27 @@ static const int BACK_Y = 4;
 static const int SETTINGS_MAIN_WIFI_X = 28;
 static const int SETTINGS_MAIN_WIFI_Y = 46;
 static const int SETTINGS_MAIN_WIFI_W = 264;
-static const int SETTINGS_MAIN_WIFI_H = 42;
+static const int SETTINGS_MAIN_WIFI_H = 36;
 
 static const int SETTINGS_MAIN_TOUCH_X = 28;
-static const int SETTINGS_MAIN_TOUCH_Y = 94;
+static const int SETTINGS_MAIN_TOUCH_Y = 88;
 static const int SETTINGS_MAIN_TOUCH_W = 264;
-static const int SETTINGS_MAIN_TOUCH_H = 42;
+static const int SETTINGS_MAIN_TOUCH_H = 36;
+
+static const int SETTINGS_MAIN_TESTS_X = 28;
+static const int SETTINGS_MAIN_TESTS_Y = 130;
+static const int SETTINGS_MAIN_TESTS_W = 264;
+static const int SETTINGS_MAIN_TESTS_H = 36;
 
 static const int SETTINGS_MAIN_SOUND_X = 28;
-static const int SETTINGS_MAIN_SOUND_Y = 142;
+static const int SETTINGS_MAIN_SOUND_Y = 172;
 static const int SETTINGS_MAIN_SOUND_W = 264;
-static const int SETTINGS_MAIN_SOUND_H = 40;
+static const int SETTINGS_MAIN_SOUND_H = 36;
 
 static const int SETTINGS_MAIN_BACK_X = 28;
-static const int SETTINGS_MAIN_BACK_Y = 190;
+static const int SETTINGS_MAIN_BACK_Y = 214;
 static const int SETTINGS_MAIN_BACK_W = 264;
-static const int SETTINGS_MAIN_BACK_H = 34;
+static const int SETTINGS_MAIN_BACK_H = 22;
 
 static const int WIFI_FIELD_X = 28;
 static const int WIFI_FIELD_W = 264;
@@ -166,6 +171,11 @@ static const int TOUCH_DIAG_BACK_Y = 198;
 static const int TOUCH_DIAG_BACK_W = 136;
 static const int TOUCH_DIAG_BACK_H = 30;
 
+static const int TESTS_PLAY_X = 44;
+static const int TESTS_PLAY_Y = 102;
+static const int TESTS_PLAY_W = 232;
+static const int TESTS_PLAY_H = 42;
+
 static const int HOME_TIME_Y = 56;
 static const int HOME_SUBTITLE_Y = 102;
 static const int HOME_PLAY_X = 18;
@@ -206,6 +216,7 @@ static UIButton btnMenuHome = {MENU_BACK_X, MENU_BACK_Y, MENU_BACK_W, MENU_BACK_
 static UIButton btnBack     = {BACK_X, BACK_Y, BACK_W, BACK_H, UI_NEUTRAL, UI_NEUTRAL_PRESSED, "BACK"};
 static UIButton btnSettingsMainBack = {SETTINGS_MAIN_BACK_X, SETTINGS_MAIN_BACK_Y, SETTINGS_MAIN_BACK_W, SETTINGS_MAIN_BACK_H, UI_NEUTRAL, UI_NEUTRAL_PRESSED, "BACK"};
 static UIButton btnSettingsTouchDiag = {SETTINGS_MAIN_TOUCH_X, SETTINGS_MAIN_TOUCH_Y, SETTINGS_MAIN_TOUCH_W, SETTINGS_MAIN_TOUCH_H, UI_PANEL_ALT, UI_SECONDARY_PRESSED, "TOUCH DIAGNOSTICS"};
+static UIButton btnSettingsTests = {SETTINGS_MAIN_TESTS_X, SETTINGS_MAIN_TESTS_Y, SETTINGS_MAIN_TESTS_W, SETTINGS_MAIN_TESTS_H, UI_PANEL_ALT, UI_SECONDARY_PRESSED, "TESTS"};
 static UIButton btnWifiScan = {WIFI_SCAN_X, WIFI_SCAN_Y, WIFI_SCAN_W, WIFI_SCAN_H, UI_PANEL_ALT, UI_SECONDARY_PRESSED, "SCAN NETWORKS"};
 static UIButton btnWifiConnect = {WIFI_CONNECT_X, WIFI_CONNECT_Y, WIFI_CONNECT_W, WIFI_CONNECT_H, UI_SUCCESS, UI_SUCCESS_PRESSED, "CONNECT"};
 static UIButton btnWifiBack = {WIFI_BACK_X, WIFI_BACK_Y, WIFI_BACK_W, WIFI_BACK_H, UI_NEUTRAL, UI_NEUTRAL_PRESSED, "BACK"};
@@ -213,6 +224,7 @@ static UIButton btnListPrev = {LIST_PREV_X, LIST_PREV_Y, LIST_PREV_W, LIST_PREV_
 static UIButton btnListNext = {LIST_NEXT_X, LIST_NEXT_Y, LIST_NEXT_W, LIST_NEXT_H, UI_NEUTRAL, UI_NEUTRAL_PRESSED, "NEXT"};
 static UIButton btnListBack = {LIST_BACK_X, LIST_BACK_Y, LIST_BACK_W, LIST_BACK_H, UI_NEUTRAL, UI_NEUTRAL_PRESSED, "BACK"};
 static UIButton btnTouchDiagBack = {TOUCH_DIAG_BACK_X, TOUCH_DIAG_BACK_Y, TOUCH_DIAG_BACK_W, TOUCH_DIAG_BACK_H, UI_NEUTRAL, UI_NEUTRAL_PRESSED, "BACK"};
+static UIButton btnTestsPlaySong = {TESTS_PLAY_X, TESTS_PLAY_Y, TESTS_PLAY_W, TESTS_PLAY_H, UI_ACCENT, UI_ACCENT_PRESSED, "PLAY TEST SONG"};
 
 static OnScreenKeyboard* keyboard = nullptr;
 static WiFiService wifiService;
@@ -418,6 +430,7 @@ static const char* screenStateName(ScreenState screen) {
     case SCREEN_GAME: return "GAME";
     case SCREEN_BALANCE: return "BALANCE";
     case SCREEN_SETTINGS: return "SETTINGS";
+    case SCREEN_TESTS: return "TESTS";
     case SCREEN_PROFILE: return "PROFILE";
     case SCREEN_TOPUP: return "TOPUP";
   }
@@ -429,6 +442,7 @@ static const char* settingsViewName(SettingsViewState view) {
     case SETTINGS_VIEW_MAIN: return "MAIN";
     case SETTINGS_VIEW_WIFI: return "WIFI";
     case SETTINGS_VIEW_TOUCH_DIAGNOSTICS: return "TOUCH";
+    case SETTINGS_VIEW_TESTS: return "TESTS";
   }
   return "MAIN";
 }
@@ -877,6 +891,9 @@ static void applyPendingAction(AppState& app) {
       app.currentScreen = SCREEN_SETTINGS;
       app.settingsView = SETTINGS_VIEW_MAIN;
       break;
+    case ACTION_GOTO_TESTS:
+      app.currentScreen = SCREEN_TESTS;
+      break;
     case ACTION_GOTO_PROFILE:
       app.currentScreen = SCREEN_PROFILE;
       break;
@@ -1204,6 +1221,14 @@ static void drawAnimatedButton(SimpleUI& ui, ButtonAnimTarget target, bool press
   }
 }
 
+static bool isBackOnlyScreen(ScreenState screen) {
+  return screen == SCREEN_GAME ||
+         screen == SCREEN_BALANCE ||
+         screen == SCREEN_PROFILE ||
+         screen == SCREEN_TOPUP ||
+         screen == SCREEN_TESTS;
+}
+
 static bool isAnimTargetVisible(ScreenState screen, ButtonAnimTarget target) {
   if (screen == SCREEN_HOME) {
     return (target == BTN_ANIM_HOME_PLAY || target == BTN_ANIM_HOME_MENU);
@@ -1212,7 +1237,7 @@ static bool isAnimTargetVisible(ScreenState screen, ButtonAnimTarget target) {
     return (target == BTN_ANIM_MENU_PROFILE || target == BTN_ANIM_MENU_TOPUP ||
             target == BTN_ANIM_MENU_SETTINGS || target == BTN_ANIM_MENU_HOME);
   }
-  return (screen == SCREEN_GAME || screen == SCREEN_BALANCE || screen == SCREEN_PROFILE || screen == SCREEN_TOPUP) &&
+  return isBackOnlyScreen(screen) &&
          target == BTN_ANIM_BACK;
 }
 
@@ -1330,6 +1355,7 @@ void initAppState(AppState& app) {
   app.idleSinceMs = 0;
   app.powerMode = POWER_MODE_NORMAL;
   app.balanceReturnScreen = SCREEN_GAME;
+  app.testSongRequested = false;
 
   app.gameCacheValid = false;
 
@@ -1484,6 +1510,17 @@ static void updateMainSettingsTouchCard(TFT_eSPI& tft, SimpleUI& ui) {
     UI_PANEL, UI_BORDER, UI_TEXT_MUTED, UI_TEXT
   };
   ui.drawValueCard(touchCard);
+}
+
+static void updateMainSettingsTestsCard(TFT_eSPI& tft, SimpleUI& ui) {
+  tft.fillRect(SETTINGS_MAIN_TESTS_X, SETTINGS_MAIN_TESTS_Y, SETTINGS_MAIN_TESTS_W, SETTINGS_MAIN_TESTS_H, UI_BG);
+
+  UIValueCard testsCard = {
+    SETTINGS_MAIN_TESTS_X, SETTINGS_MAIN_TESTS_Y, SETTINGS_MAIN_TESTS_W, SETTINGS_MAIN_TESTS_H,
+    "Tests", "Open sound test tools",
+    UI_PANEL, UI_BORDER, UI_TEXT_MUTED, UI_TEXT
+  };
+  ui.drawValueCard(testsCard);
 }
 
 static void drawWifiStatusBadge(SimpleUI& ui, const AppState& app) {
@@ -1659,6 +1696,15 @@ static void drawTouchDiagnosticsScreen(TFT_eSPI& tft, SimpleUI& ui, AppState& ap
   ui.drawButton(btnTouchDiagBack);
 }
 
+static void drawTestsScreen(TFT_eSPI& tft, SimpleUI& ui) {
+  tft.fillRect(0, 36, SCREEN_W, SCREEN_H - 36, UI_BG);
+  drawCard(ui, 28, 60, 264, 108);
+  ui.drawCenteredText("Sound test area", SCREEN_W / 2, 84, UI_TEXT, UI_PANEL, 2);
+  ui.drawCenteredText("Run the loaded MIDI sequence", SCREEN_W / 2, 110, UI_TEXT_MUTED, UI_PANEL, 1);
+  ui.drawButton(btnTestsPlaySong);
+  ui.drawButton(btnBack);
+}
+
 static void updateSettingsRegions(TFT_eSPI& tft, SimpleUI& ui, AppState& app, uint16_t regions, bool force) {
   if (app.keyboardActive) {
     if (keyboard != nullptr) {
@@ -1693,12 +1739,21 @@ static void updateSettingsRegions(TFT_eSPI& tft, SimpleUI& ui, AppState& app, ui
     return;
   }
 
+  if (app.settingsView == SETTINGS_VIEW_TESTS) {
+    if (force) {
+      drawTestsScreen(tft, ui);
+    }
+    app.settingsCacheValid = true;
+    return;
+  }
+
   if (app.settingsView == SETTINGS_VIEW_MAIN) {
     if (force || (regions & (DIRTY_WIFI_CARD | DIRTY_WIFI_BADGE | DIRTY_WIFI_ACTION_BUTTON))) {
       updateMainSettingsWifiCard(tft, ui, app, force);
     }
     if (force) {
       updateMainSettingsTouchCard(tft, ui);
+      updateMainSettingsTestsCard(tft, ui);
     }
     if (force || (regions & DIRTY_SOUND_CARD)) {
       updateSoundCard(tft, ui, app, force);
@@ -1851,6 +1906,9 @@ static void drawSettingsScreen(TFT_eSPI& tft, SimpleUI& ui, AppState& app) {
   } else if (app.settingsView == SETTINGS_VIEW_TOUCH_DIAGNOSTICS) {
     title = "TOUCH DIAGNOSTICS";
     titleColor = UI_WARNING;
+  } else if (app.settingsView == SETTINGS_VIEW_TESTS) {
+    title = "TESTS";
+    titleColor = UI_ACCENT;
   }
   ui.drawHeaderBar(title, titleColor);
   yield();
@@ -1890,6 +1948,11 @@ void drawCurrentScreen(TFT_eSPI& tft, SimpleUI& ui, AppState& app) {
 
     case SCREEN_SETTINGS:
       drawSettingsScreen(tft, ui, app);
+      break;
+    case SCREEN_TESTS:
+      drawScreenBase(tft);
+      ui.drawHeaderBar("TESTS", UI_ACCENT);
+      drawTestsScreen(tft, ui);
       break;
     case SCREEN_PROFILE:
       drawPlaceholderScreen(tft, ui, "PROFILE", "Profile area", "account details coming later", UI_SECONDARY);
@@ -1931,6 +1994,8 @@ void updateCurrentScreenData(TFT_eSPI& tft, SimpleUI& ui, AppState& app) {
 
     case SCREEN_SETTINGS:
       updateSettingsRegions(tft, ui, app, regions, false);
+      break;
+    case SCREEN_TESTS:
       break;
   }
 }
@@ -2394,6 +2459,18 @@ void handleAppTouch(SimpleUI& ui, AppState& app, int tx, int ty) {
       }
       break;
 
+    case SCREEN_TESTS:
+      if (edgeAwareButtonHit(ui, btnBack, tx, ty, 10, 8)) {
+        queueScreenAction(app, ACTION_GOTO_SETTINGS, BTN_ANIM_BACK);
+        return;
+      }
+      if (edgeAwareButtonHit(ui, btnTestsPlaySong, tx, ty, 10, 8)) {
+        app.testSongRequested = true;
+        appUiShowMessage(app, "Playing test song", UI_INFO, 1800);
+        return;
+      }
+      break;
+
     case SCREEN_PROFILE:
     case SCREEN_TOPUP:
       if (edgeAwareButtonHit(ui, btnBack, tx, ty, 10, 8)) {
@@ -2512,6 +2589,12 @@ void handleAppTouch(SimpleUI& ui, AppState& app, int tx, int ty) {
           return;
         }
 
+        if (edgeAwareButtonHit(ui, btnSettingsTests, tx, ty, 8, 8)) {
+          app.settingsView = SETTINGS_VIEW_TESTS;
+          app.fullRedrawRequested = true;
+          return;
+        }
+
         UIToggle soundToggle = {
           SETTINGS_MAIN_SOUND_X, SETTINGS_MAIN_SOUND_Y, SETTINGS_MAIN_SOUND_W, SETTINGS_MAIN_SOUND_H,
           "Sound", app.soundEnabled,
@@ -2530,6 +2613,20 @@ void handleAppTouch(SimpleUI& ui, AppState& app, int tx, int ty) {
         if (edgeAwareButtonHit(ui, btnTouchDiagBack, tx, ty, 8, 8)) {
           app.settingsView = SETTINGS_VIEW_MAIN;
           app.fullRedrawRequested = true;
+        }
+        return;
+      }
+
+      if (app.settingsView == SETTINGS_VIEW_TESTS) {
+        if (edgeAwareButtonHit(ui, btnBack, tx, ty, 10, 8)) {
+          app.settingsView = SETTINGS_VIEW_MAIN;
+          app.fullRedrawRequested = true;
+          return;
+        }
+        if (edgeAwareButtonHit(ui, btnTestsPlaySong, tx, ty, 10, 8)) {
+          app.testSongRequested = true;
+          appUiShowMessage(app, "Playing test song", UI_INFO, 1800);
+          return;
         }
         return;
       }

@@ -7,7 +7,9 @@ BuzzerService::BuzzerService(int8_t pinValue)
     sequenceRunning(false),
     sequenceCount(0),
     sequenceIndex(0),
-    nextChangeMs(0) {
+    nextChangeMs(0),
+    sequence(nullptr),
+    oneShotStep{0, 0, 0} {
 }
 
 void BuzzerService::begin() {
@@ -86,43 +88,57 @@ void BuzzerService::playWake() {
 
 void BuzzerService::playBootMelody() {
   static const ToneStep kBootSteps[] = {
-    {784, 160, 5}, 
-    {659, 160, 5},  
-    {523, 320, 8},   
-    {600, 320, 5},   
-    {698, 320, 20}  
+    {784, 160, 5},
+    {659, 160, 5},
+    {523, 320, 8},
+    {600, 320, 5},
+    {698, 320, 20}
   };
 
   startSequence(kBootSteps, sizeof(kBootSteps) / sizeof(kBootSteps[0]));
 }
 
+void BuzzerService::playTestSong() {
+  static const ToneStep kMelody[] = {
+    {44, 125, 5}, {98, 125, 5}, {131, 125, 5}, {44, 125, 5}, {87, 125, 5}, {131, 125, 5}, {44, 125, 5}, {87, 125, 5},
+    {55, 125, 5}, {87, 125, 5}, {131, 125, 5}, {55, 125, 5}, {82, 125, 5}, {131, 125, 5}, {55, 125, 5}, {82, 125, 5},
+    {33, 125, 5}, {98, 125, 5}, {147, 125, 5}, {33, 125, 5}, {98, 125, 5}, {147, 125, 5}, {33, 125, 5}, {110, 125, 5},
+    {37, 125, 5}, {87, 125, 5}, {131, 125, 5}, {37, 125, 5}, {87, 125, 5}, {147, 125, 5}, {37, 125, 5}, {87, 125, 5},
+    {44, 125, 5}, {98, 125, 5}, {131, 125, 5}, {44, 125, 5}, {87, 125, 5}, {131, 125, 5}, {44, 125, 5}, {87, 125, 5},
+    {55, 125, 5}, {87, 125, 5}, {131, 125, 5}, {55, 125, 5}, {82, 125, 5}, {131, 125, 5}, {55, 125, 5}, {82, 125, 5},
+    {33, 125, 5}, {98, 125, 5}, {147, 125, 5}, {33, 125, 5}, {98, 125, 5}, {147, 125, 5}, {33, 125, 5}, {110, 125, 5},
+    {37, 125, 5}, {87, 125, 5}, {131, 125, 5}, {37, 125, 5}, {87, 125, 5}, {147, 125, 5}, {37, 125, 5}, {87, 125, 5},
+    {131, 125, 5}, {98, 125, 5}, {131, 125, 5}, {41, 125, 5}, {98, 125, 5}, {123, 125, 5}, {41, 125, 5}, {98, 125, 5},
+    {131, 125, 5}, {110, 125, 5}, {165, 125, 5}, {44, 125, 5}, {110, 125, 5}, {175, 125, 5}, {44, 125, 5}, {110, 125, 5},
+    {110, 125, 5}, {82, 125, 5}, {131, 125, 5}, {55, 125, 5}, {131, 125, 5}, {147, 125, 5}, {55, 125, 5}, {82, 125, 5},
+    {49, 125, 5}, {73, 125, 5}, {131, 125, 5}, {49, 125, 5}, {123, 125, 5}, {147, 125, 5}, {49, 125, 5}, {98, 125, 5},
+    {131, 125, 5}, {98, 125, 5}, {131, 125, 5}, {41, 125, 5}, {98, 125, 5}, {123, 125, 5}, {41, 125, 5}, {98, 125, 5},
+    {123, 125, 5}, {110, 125, 5}, {165, 125, 5}, {44, 125, 5}, {110, 125, 5}, {175, 125, 5}, {44, 125, 5}, {110, 125, 5},
+    {110, 125, 5}, {82, 125, 5}, {131, 125, 5}, {55, 125, 5}, {131, 125, 5}, {147, 125, 5}, {55, 125, 5}, {82, 125, 5},
+    {49, 125, 5}, {73, 125, 5}, {131, 125, 5}, {49, 125, 5}, {123, 125, 5}, {147, 125, 5}, {49, 125, 5}, {98, 125, 5}
+  };
+
+  startSequence(kMelody, sizeof(kMelody) / sizeof(kMelody[0]));
+}
+
 void BuzzerService::playTone(uint16_t frequency, uint16_t durationMs) {
-  static const ToneStep step = {0, 0, 0};
   if (!enabled || !isSupported()) {
     return;
   }
 
-  ToneStep oneShot = step;
-  oneShot.frequency = frequency;
-  oneShot.durationMs = durationMs;
-  oneShot.gapMs = 0;
-  startSequence(&oneShot, 1);
+  oneShotStep.frequency = frequency;
+  oneShotStep.durationMs = durationMs;
+  oneShotStep.gapMs = 0;
+  startSequence(&oneShotStep, 1);
 }
 
-void BuzzerService::startSequence(const ToneStep* steps, uint8_t count) {
+void BuzzerService::startSequence(const ToneStep* steps, uint16_t count) {
   if (!enabled || !isSupported() || steps == nullptr || count == 0) {
     return;
   }
 
-  if (count > (sizeof(sequence) / sizeof(sequence[0]))) {
-    count = sizeof(sequence) / sizeof(sequence[0]);
-  }
-
   stopPlayback();
-  for (uint8_t i = 0; i < count; i++) {
-    sequence[i] = steps[i];
-  }
-
+  sequence = steps;
   sequenceCount = count;
   sequenceIndex = 0;
   sequenceRunning = true;
@@ -139,10 +155,11 @@ void BuzzerService::stopPlayback() {
   sequenceCount = 0;
   sequenceIndex = 0;
   nextChangeMs = 0;
+  sequence = nullptr;
 }
 
 void BuzzerService::startCurrentStep(unsigned long nowMs) {
-  if (!sequenceRunning || sequenceIndex >= sequenceCount) {
+  if (!sequenceRunning || sequence == nullptr || sequenceIndex >= sequenceCount) {
     sequenceRunning = false;
     active = false;
     return;

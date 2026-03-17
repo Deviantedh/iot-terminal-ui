@@ -5,6 +5,12 @@
 
 class BuzzerService {
 public:
+  struct ToneStep {
+    uint16_t frequency;
+    uint16_t durationMs;
+    uint16_t gapMs;
+  };
+
   explicit BuzzerService(int8_t pin);
 
   void begin();
@@ -17,16 +23,11 @@ public:
   void playError();
   void playWake();
   void playBootMelody();
+  void playTestSong();
 
 private:
-  struct ToneStep {
-    uint16_t frequency;
-    uint16_t durationMs;
-    uint16_t gapMs;
-  };
-
   void playTone(uint16_t frequency, uint16_t durationMs);
-  void startSequence(const ToneStep* steps, uint8_t count);
+  void startSequence(const ToneStep* steps, uint16_t count);
   void stopPlayback();
   void startCurrentStep(unsigned long nowMs);
 
@@ -34,10 +35,11 @@ private:
   bool enabled;
   bool active;
   bool sequenceRunning;
-  uint8_t sequenceCount;
-  uint8_t sequenceIndex;
+  uint16_t sequenceCount;
+  uint16_t sequenceIndex;
   unsigned long nextChangeMs;
-  ToneStep sequence[6];
+  const ToneStep* sequence;
+  ToneStep oneShotStep;
 };
 
 #endif

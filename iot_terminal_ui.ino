@@ -127,6 +127,11 @@ void loop() {
   processUiUpdates(displayHal.getTft(), *ui, app);
   buzzer.setEnabled(app.soundEnabled);
 
+  if (app.testSongRequested) {
+    app.testSongRequested = false;
+    buzzer.playTestSong();
+  }
+
   if (appIsSleeping(app)) {
     if (!displayHal.displayIsSleeping()) {
       displayHal.displaySleepOn();
