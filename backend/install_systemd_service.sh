@@ -12,6 +12,8 @@ if [[ ! -f "${PROJECT_DIR}/backend/mock_server.py" ]]; then
   exit 1
 fi
 
+python3 -m pip install -r "${PROJECT_DIR}/backend/requirements.txt"
+
 if [[ "${PROJECT_DIR}" != "/opt/iot-terminal-ui" ]]; then
   TMP_SERVICE="$(mktemp)"
   sed "s#/opt/iot-terminal-ui#${PROJECT_DIR}#g" "${SERVICE_SRC}" > "${TMP_SERVICE}"

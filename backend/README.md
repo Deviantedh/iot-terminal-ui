@@ -5,11 +5,12 @@ Tiny local server for checking what the device sends to the backend API.
 Run from the project root:
 
 ```bash
+python3 -m pip install -r backend/requirements.txt
 python3 backend/mock_server.py --host 0.0.0.0 --port 8080
 ```
 
-The server prints every request to the terminal and returns small JSON responses
-for health, auth, balance, 3-reels spin, 5-reels spin, and device events.
+The async server returns small JSON responses for health, auth, balance,
+3-reels spin, 5-reels spin, and device events.
 
 It keeps a tiny in-memory balance dictionary by `deviceId`. `spin_win` and
 `spin_loss` events update that balance from the request `value`, which lets the
@@ -22,6 +23,13 @@ Copy the project to the server, for example:
 ```bash
 sudo mkdir -p /opt/iot-terminal-ui
 sudo cp -R . /opt/iot-terminal-ui
+```
+
+If you copy only the backend folder, keep the same inner path:
+
+```bash
+sudo mkdir -p /opt/iot-terminal-ui/backend
+sudo rsync -av --delete backend/ /opt/iot-terminal-ui/backend/
 ```
 
 Install and start the systemd service:
