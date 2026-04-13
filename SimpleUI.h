@@ -58,6 +58,8 @@ public:
 
   void drawCenteredText(const char* text, int centerX, int centerY,
                         uint16_t textColor, uint16_t bgColor, int textSize);
+  void drawCenteredTextInRect(const char* text, int x, int y, int w, int h,
+                              uint16_t textColor, uint16_t bgColor, int textSize);
 
   void drawTitle(const char* text, uint16_t color);
   void drawHeaderBar(const char* title, uint16_t titleColor);

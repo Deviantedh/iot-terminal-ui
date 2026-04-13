@@ -38,6 +38,8 @@ later game integration and server-side logic.
   - debounced physical button polling with short/long `POWER`
 - `BuzzerService`
   - lightweight passive buzzer output on `D0 / GPIO16`
+- `ServerApiService`
+  - optional HTTP API client for auth, balance, spin prefetch, and event posting
 - `iot_terminal_ui.ino`
   - entry point, setup, main loop
 
@@ -73,6 +75,8 @@ Sleep display note:
 
 Main build instructions are in `docs/BUILD.md`.
 Integration notes are in `docs/INTEGRATION.md`.
+Backend API contract is in `docs/server-api.openapi.yaml`.
+Network/local mode switches are in `ServerApiConfig.h`.
 
 Short version:
 

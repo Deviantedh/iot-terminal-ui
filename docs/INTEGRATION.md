@@ -24,6 +24,8 @@ write directly into random `AppState` fields.
   - physical `MENU` / `POWER`
 - `BuzzerService`
   - simple passive buzzer patterns
+- `ServerApiService`
+  - isolated server API client; current spin mode is strict network or fully local by config
 
 ## Do not touch directly
 
@@ -43,7 +45,11 @@ should go through `AppIntegration`.
 
 Header:
 
-- [`/Users/devianted/Documents/Arduino/iot_terminal_ui/AppIntegration.h`](/Users/devianted/Documents/Arduino/iot_terminal_ui/AppIntegration.h)
+- [`/Users/rublev/DEV/iot/iot_terminal_ui/AppIntegration.h`](/Users/rublev/DEV/iot/iot_terminal_ui/AppIntegration.h)
+
+Server API contract:
+
+- [`/Users/rublev/DEV/iot/iot_terminal_ui/docs/server-api.openapi.yaml`](/Users/rublev/DEV/iot/iot_terminal_ui/docs/server-api.openapi.yaml)
 
 Main entry points:
 
@@ -133,3 +139,25 @@ appIntegrationOpenScreen(app, SCREEN_BALANCE);
 
 `SCREEN_BALANCE` keeps `balanceReturnScreen` aligned automatically, so future
 game code can open it without manually patching return navigation.
+
+## Server API mode rule
+
+`ServerApiService` owns all HTTP requests. The current runtime mode is strict
+network spin: the device waits for a server spin response before starting reel
+animation. If the request fails, the UI returns to an idle spin button state and
+shows the error without starting local fallback spin.
+
+HTTP transport is handled through the ESP8266 Arduino core `ESP8266HTTPClient`.
+Do not move request code into screen handlers or Wi-Fi connection code.
+
+There is no recurring background server polling. After Wi-Fi time becomes valid,
+the home screen may perform a one-shot bootstrap sequence: health, auth, balance.
+After that, gameplay requests are only made by explicit spin actions.
+
+Mode switches live in `ServerApiConfig.h`:
+
+- `SERVER_API_NETWORK_ENABLED`
+- `SERVER_API_REQUIRE_SERVER_FOR_SPIN`
+
+Current setting is online-only for spin: network enabled and server-required spin
+are both `true`. For fully local play, set `SERVER_API_NETWORK_ENABLED` to `false`.

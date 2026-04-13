@@ -31,6 +31,12 @@ void SimpleUI::drawCenteredText(const char* text, int centerX, int centerY,
   tft.setTextSize(1);
 }
 
+void SimpleUI::drawCenteredTextInRect(const char* text, int x, int y, int w, int h,
+                                      uint16_t textColor, uint16_t bgColor, int textSize) {
+  tft.fillRect(x, y, w, h, bgColor);
+  drawCenteredText(text, x + w / 2, y + h / 2, textColor, bgColor, textSize);
+}
+
 void SimpleUI::drawTitle(const char* text, uint16_t color) {
   drawCenteredText(text, 160, 20, color, UI_BG, 2);
 }
@@ -52,10 +58,12 @@ void SimpleUI::drawButton(const UIButton& btn, uint16_t fillColor) {
     tft.drawFastHLine(btn.x + 2, btn.y + 2, btn.w - 4, UI_BORDER_SOFT);
   }
 
-  drawCenteredText(
+  drawCenteredTextInRect(
     btn.text,
-    btn.x + btn.w / 2,
-    btn.y + btn.h / 2,
+    btn.x + 2,
+    btn.y + 3,
+    btn.w - 4,
+    btn.h - 6,
     UI_TEXT,
     fillColor,
     2
@@ -87,8 +95,8 @@ void SimpleUI::drawValueCardValue(const UIValueCard& card, const char* value) {
   const int valueY = card.y + card.h / 2;
   const int valueH = card.h / 2 - 4;
   tft.fillRect(card.x + 4, valueY, card.w - 8, valueH, card.fillColor);
-  drawCenteredText(value, card.x + card.w / 2, card.y + card.h - 14,
-                   card.valueColor, card.fillColor, 2);
+  drawCenteredTextInRect(value, card.x + 4, valueY, card.w - 8, valueH,
+                         card.valueColor, card.fillColor, 2);
 }
 
 void SimpleUI::drawToggle(const UIToggle& toggle) {
@@ -123,8 +131,8 @@ bool SimpleUI::toggleHit(const UIToggle& toggle, int tx, int ty, int padding) {
 
 void SimpleUI::drawStatusBadge(const UIStatusBadge& badge) {
   drawFastFrame(tft, badge.x, badge.y, badge.w, badge.h, badge.fillColor, badge.borderColor);
-  drawCenteredText(badge.text, badge.x + badge.w / 2, badge.y + badge.h / 2,
-                   badge.textColor, badge.fillColor, 1);
+  drawCenteredTextInRect(badge.text, badge.x + 1, badge.y + 1, badge.w - 2, badge.h - 2,
+                         badge.textColor, badge.fillColor, 1);
 }
 
 bool SimpleUI::inRect(int tx, int ty, int x, int y, int w, int h) {

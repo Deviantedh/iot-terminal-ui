@@ -98,6 +98,46 @@ void BuzzerService::playBootMelody() {
   startSequence(kBootSteps, sizeof(kBootSteps) / sizeof(kBootSteps[0]));
 }
 
+void BuzzerService::playSpinStart() {
+  static const ToneStep kSpinStartSteps[] = {
+    {540, 40, 6},
+    {720, 44, 0}
+  };
+  startSequence(kSpinStartSteps, sizeof(kSpinStartSteps) / sizeof(kSpinStartSteps[0]));
+}
+
+void BuzzerService::playReelStop() {
+  playTone(1180, 18);
+}
+
+void BuzzerService::playWinSmall() {
+  static const ToneStep kWinSteps[] = {
+    {740, 70, 8},
+    {988, 80, 8},
+    {1318, 120, 0}
+  };
+  startSequence(kWinSteps, sizeof(kWinSteps) / sizeof(kWinSteps[0]));
+}
+
+void BuzzerService::playJackpot() {
+  static const ToneStep kJackpotSteps[] = {
+    {784, 80, 8},
+    {988, 80, 8},
+    {1174, 100, 8},
+    {1568, 160, 8},
+    {1760, 220, 0}
+  };
+  startSequence(kJackpotSteps, sizeof(kJackpotSteps) / sizeof(kJackpotSteps[0]));
+}
+
+void BuzzerService::playLose() {
+  static const ToneStep kLoseSteps[] = {
+    {520, 55, 6},
+    {420, 85, 0}
+  };
+  startSequence(kLoseSteps, sizeof(kLoseSteps) / sizeof(kLoseSteps[0]));
+}
+
 void BuzzerService::playTestSong() {
   static const ToneStep kMelody[] = {
     {44, 125, 5}, {98, 125, 5}, {131, 125, 5}, {44, 125, 5}, {87, 125, 5}, {131, 125, 5}, {44, 125, 5}, {87, 125, 5},

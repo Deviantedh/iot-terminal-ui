@@ -61,6 +61,7 @@ void setup() {
 
   displayHal.begin();
   buzzer.begin();
+  randomSeed(micros());
   buttonsReady = buttons.begin();
   initAppState(app);
   appSetDebugMode(app, APP_DEBUG_MODE_DEFAULT != 0);

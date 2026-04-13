@@ -1,0 +1,15 @@
+[Unit]
+Description=IoT Terminal Mock Backend
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=simple
+WorkingDirectory=/opt/iot-terminal-ui
+ExecStart=/usr/bin/env python3 /opt/iot-terminal-ui/backend/mock_server.py --host 0.0.0.0 --port 8080
+Restart=always
+RestartSec=2
+Environment=PYTHONUNBUFFERED=1
+
+[Install]
+WantedBy=multi-user.target

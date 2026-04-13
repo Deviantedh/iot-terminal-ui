@@ -1,8 +1,12 @@
 #include "AppScreens.h"
+#include "BuzzerService.h"
 #include "OnScreenKeyboard.h"
+#include "SlotGame.h"
+#include "ServerApiService.h"
 #include "WiFiService.h"
 #include "WiFiProfiles.h"
 #include "TimeService.h"
+#include "slot_icons.h"
 #include <string.h>
 
 #ifndef APP_SERIAL_LOGGING_ENABLED
@@ -58,6 +62,18 @@ static const uint16_t UI_INFO_SOFT = rgb565(74, 92, 122);
 static const uint16_t UI_NEUTRAL = rgb565(72, 82, 96);
 static const uint16_t UI_NEUTRAL_PRESSED = rgb565(92, 102, 118);
 static const uint16_t UI_IDLE = rgb565(66, 72, 84);
+static const uint16_t UI_GOLD = rgb565(232, 190, 82);
+static const uint16_t UI_GOLD_SOFT = rgb565(122, 88, 28);
+static const uint16_t UI_SLOT_RED = rgb565(178, 42, 42);
+static const uint16_t UI_SLOT_RED_PRESSED = rgb565(146, 30, 30);
+static const uint16_t UI_SLOT_BLACK = rgb565(10, 12, 16);
+static const uint16_t UI_PAYLINE_COLORS[SLOT_MAX_PAYLINES] = {
+  rgb565(255, 216, 64), rgb565(98, 214, 255), rgb565(255, 124, 124), rgb565(138, 255, 166),
+  rgb565(204, 148, 255), rgb565(255, 172, 80), rgb565(120, 246, 214), rgb565(255, 110, 214),
+  rgb565(188, 255, 92), rgb565(255, 208, 138), rgb565(138, 166, 255), rgb565(255, 150, 92),
+  rgb565(96, 255, 196), rgb565(255, 94, 154), rgb565(255, 238, 120), rgb565(132, 236, 255),
+  rgb565(255, 132, 210), rgb565(196, 255, 126), rgb565(255, 180, 120), rgb565(230, 212, 255)
+};
 
 // ---------------------------
 // Layout
@@ -193,6 +209,10 @@ static const int HOME_BG_X = 18;
 static const int HOME_BG_Y = 18;
 static const int HOME_BG_W = 284;
 static const int HOME_BG_H = 136;
+static const int HOME_SERVER_STATUS_X = 76;
+static const int HOME_SERVER_STATUS_Y = 136;
+static const int HOME_SERVER_STATUS_W = 168;
+static const int HOME_SERVER_STATUS_H = 14;
 
 static const int MENU_BACK_X = 12;
 static const int MENU_BACK_Y = 4;
@@ -203,6 +223,58 @@ static const int GAME_BALANCE_X = 210;
 static const int GAME_BALANCE_Y = 4;
 static const int GAME_BALANCE_W = 98;
 static const int GAME_BALANCE_H = 28;
+static const int MODE_CARD_X = 28;
+static const int MODE_CARD_W = 264;
+static const int MODE_CARD_H = 56;
+static const int MODE_CARD_CLASSIC_Y = 74;
+static const int MODE_CARD_ADVANCED_Y = 142;
+static const int SLOT_PANEL_X = 18;
+static const int SLOT_PANEL_Y = 42;
+static const int SLOT_PANEL_W = 284;
+static const int SLOT_PANEL_H = 172;
+static const int SLOT_STATUS_X = 34;
+static const int SLOT_STATUS_Y = 48;
+static const int SLOT_STATUS_W = 252;
+static const int SLOT_STATUS_H = 18;
+static const int SLOT_REEL_Y = 80;
+static const int SLOT_REEL_W = 64;
+static const int SLOT_REEL_H = 70;
+static const int SLOT_REEL_GAP = 18;
+static const int SLOT_REEL_1_X = 44;
+static const int SLOT_REEL_2_X = SLOT_REEL_1_X + SLOT_REEL_W + SLOT_REEL_GAP;
+static const int SLOT_REEL_3_X = SLOT_REEL_2_X + SLOT_REEL_W + SLOT_REEL_GAP;
+static const int SLOT_REEL_5_Y = 72;
+static const int SLOT_REEL_5_W = 48;
+static const int SLOT_REEL_5_H = 88;
+static const int SLOT_REEL_5_GAP = 6;
+static const int SLOT_REEL_5_1_X = 28;
+static const int SLOT_REEL_5_ROW_H = 24;
+static const int SLOT_REEL_5_ROW_GAP = 4;
+static const int SLOT_BET_LABEL_Y = 162;
+static const int SLOT_MINUS_X = 20;
+static const int SLOT_MINUS_Y = 174;
+static const int SLOT_MINUS_W = 34;
+static const int SLOT_MINUS_H = 26;
+static const int SLOT_BET_BOX_X = 62;
+static const int SLOT_BET_BOX_Y = 174;
+static const int SLOT_BET_BOX_W = 52;
+static const int SLOT_BET_BOX_H = 26;
+static const int SLOT_PLUS_X = 122;
+static const int SLOT_PLUS_Y = 174;
+static const int SLOT_PLUS_W = 34;
+static const int SLOT_PLUS_H = 26;
+static const int SLOT_AUTO_X = 164;
+static const int SLOT_AUTO_Y = 174;
+static const int SLOT_AUTO_W = 44;
+static const int SLOT_AUTO_H = 26;
+static const int SLOT_SPIN_X = 216;
+static const int SLOT_SPIN_Y = 168;
+static const int SLOT_SPIN_W = 62;
+static const int SLOT_SPIN_H = 34;
+static const unsigned long SLOT_AUTOPLAY_DELAY_MS = 420;
+static const unsigned long SLOT_PAYLINE_FLASH_MS = 200;
+static const unsigned long SLOT_REEL_STEP_MS = 56;
+static const int SLOT_ICON_SIZE = 32;
 
 // ---------------------------
 // Buttons
@@ -214,6 +286,8 @@ static UIButton btnMenuTopUp   = {42, 112, 236, 42, UI_PANEL_ALT, UI_SECONDARY_P
 static UIButton btnMenuSettings = {42, 166, 236, 42, UI_PANEL_ALT, UI_SECONDARY_PRESSED, "SETTINGS"};
 static UIButton btnMenuHome = {MENU_BACK_X, MENU_BACK_Y, MENU_BACK_W, MENU_BACK_H, UI_NEUTRAL, UI_NEUTRAL_PRESSED, "HOME"};
 static UIButton btnBack     = {BACK_X, BACK_Y, BACK_W, BACK_H, UI_NEUTRAL, UI_NEUTRAL_PRESSED, "BACK"};
+static UIButton btnModeClassic = {MODE_CARD_X, MODE_CARD_CLASSIC_Y, MODE_CARD_W, MODE_CARD_H, UI_PANEL_ALT, UI_SECONDARY_PRESSED, "CLASSIC"};
+static UIButton btnModeAdvanced = {MODE_CARD_X, MODE_CARD_ADVANCED_Y, MODE_CARD_W, MODE_CARD_H, UI_PANEL_ALT, UI_SECONDARY_PRESSED, "ADVANCED"};
 static UIButton btnSettingsMainBack = {SETTINGS_MAIN_BACK_X, SETTINGS_MAIN_BACK_Y, SETTINGS_MAIN_BACK_W, SETTINGS_MAIN_BACK_H, UI_NEUTRAL, UI_NEUTRAL_PRESSED, "BACK"};
 static UIButton btnSettingsTouchDiag = {SETTINGS_MAIN_TOUCH_X, SETTINGS_MAIN_TOUCH_Y, SETTINGS_MAIN_TOUCH_W, SETTINGS_MAIN_TOUCH_H, UI_PANEL_ALT, UI_SECONDARY_PRESSED, "TOUCH DIAGNOSTICS"};
 static UIButton btnSettingsTests = {SETTINGS_MAIN_TESTS_X, SETTINGS_MAIN_TESTS_Y, SETTINGS_MAIN_TESTS_W, SETTINGS_MAIN_TESTS_H, UI_PANEL_ALT, UI_SECONDARY_PRESSED, "TESTS"};
@@ -225,13 +299,20 @@ static UIButton btnListNext = {LIST_NEXT_X, LIST_NEXT_Y, LIST_NEXT_W, LIST_NEXT_
 static UIButton btnListBack = {LIST_BACK_X, LIST_BACK_Y, LIST_BACK_W, LIST_BACK_H, UI_NEUTRAL, UI_NEUTRAL_PRESSED, "BACK"};
 static UIButton btnTouchDiagBack = {TOUCH_DIAG_BACK_X, TOUCH_DIAG_BACK_Y, TOUCH_DIAG_BACK_W, TOUCH_DIAG_BACK_H, UI_NEUTRAL, UI_NEUTRAL_PRESSED, "BACK"};
 static UIButton btnTestsPlaySong = {TESTS_PLAY_X, TESTS_PLAY_Y, TESTS_PLAY_W, TESTS_PLAY_H, UI_ACCENT, UI_ACCENT_PRESSED, "PLAY TEST SONG"};
+static UIButton btnGameAuto = {SLOT_AUTO_X, SLOT_AUTO_Y, SLOT_AUTO_W, SLOT_AUTO_H, UI_PANEL_ALT, UI_SECONDARY_PRESSED, "AUTO"};
+static UIButton btnGameSpin = {SLOT_SPIN_X, SLOT_SPIN_Y, SLOT_SPIN_W, SLOT_SPIN_H, UI_SLOT_RED, UI_SLOT_RED_PRESSED, "SPIN"};
 
 static OnScreenKeyboard* keyboard = nullptr;
 static WiFiService wifiService;
 static WiFiProfiles wifiProfiles;
 static TimeService timeService;
+static ServerApiService serverApi;
+extern BuzzerService buzzer;
 static bool wifiServiceInit = false;
 static bool wifiProfilesInit = false;
+static bool serverApiInit = false;
+static bool serverBootstrapDone = false;
+static unsigned long serverBootstrapNextAttemptMs = 0;
 static bool startupAutoConnectDone = false;
 static bool startupSavedAttempted = false;
 static bool startupBuiltInScanStarted = false;
@@ -240,6 +321,12 @@ static bool wifiAutoReconnectEnabled = false;
 static bool wifiReconnectPending = false;
 static unsigned long wifiReconnectDueMs = 0;
 static unsigned long wifiReconnectNextPollMs = 0;
+static bool serverSpinAwaiting = false;
+static SlotMode serverSpinAwaitingMode = SLOT_MODE_3;
+static bool lastDrawnServerSpinAwaiting = false;
+static bool lastObservedServerHealthKnown = false;
+static bool lastObservedServerHealthOk = false;
+static bool lastObservedServerAuthorized = false;
 
 static void fitTextWithEllipsis(TFT_eSPI& tft, const char* src, char* out, size_t outSize, int maxWidthPx);
 static void restoreWifiFormState(AppState& app);
@@ -249,6 +336,21 @@ static bool appHasActiveWork(const AppState& app);
 static void updateIdleState(AppState& app, unsigned long nowMs);
 static void syncWifiPowerSave(const AppState& app);
 static unsigned long debugPrintIntervalMs(const AppState& app);
+static void setSlotStatus(AppState& app, const char* text);
+static uint8_t slotActiveReelCount(const AppState& app);
+static uint8_t slotActiveRowCount(const AppState& app);
+static int slotReelXForMode(const AppState& app, uint8_t reelIndex);
+static void resetSlotPresentation(AppState& app);
+static void configureSlotMode(AppState& app, SlotMode mode);
+static uint16_t slotPaylineColor(uint8_t paylineIndex);
+static bool slotAllReelsStopped(const AppState& app);
+static void startSlotSpin(AppState& app);
+static bool tickSlotMachine(AppState& app, unsigned long nowMs);
+static void initServerApiIfNeeded();
+static bool serverOnlySpinMode();
+static void requestServerSlotSpin(AppState& app);
+static void beginSlotSpinWithResult(AppState& app, const SlotSpinResult& requestedResult);
+static void pollServerApi(AppState& app, unsigned long nowMs);
 
 static void configureWifiPrimaryButton(const AppState& app) {
   if (app.wifiFlowState == WIFI_FLOW_CONNECTED) {
@@ -427,6 +529,7 @@ static const char* screenStateName(ScreenState screen) {
   switch (screen) {
     case SCREEN_HOME: return "HOME";
     case SCREEN_MENU: return "MENU";
+    case SCREEN_MODE_SELECT: return "MODE_SELECT";
     case SCREEN_GAME: return "GAME";
     case SCREEN_BALANCE: return "BALANCE";
     case SCREEN_SETTINGS: return "SETTINGS";
@@ -865,6 +968,450 @@ static void fitTextWithEllipsis(TFT_eSPI& tft, const char* src, char* out, size_
   out[outSize - 1] = '\0';
 }
 
+static SlotSymbol randomSlotSymbol() {
+  return (SlotSymbol)random((int)SLOT_SYMBOL_COUNT);
+}
+
+static void setSlotStatus(AppState& app, const char* text) {
+  if (text == nullptr) {
+    app.slotStatusText[0] = '\0';
+    return;
+  }
+  strncpy(app.slotStatusText, text, sizeof(app.slotStatusText) - 1);
+  app.slotStatusText[sizeof(app.slotStatusText) - 1] = '\0';
+}
+
+static uint8_t slotActiveReelCount(const AppState& app) {
+  return slotModeReelCount(app.slotMode);
+}
+
+static uint8_t slotActiveRowCount(const AppState& app) {
+  return slotModeRowCount(app.slotMode);
+}
+
+static int slotReelXForMode(const AppState& app, uint8_t reelIndex) {
+  if (app.slotMode == SLOT_MODE_5) {
+    return SLOT_REEL_5_1_X + reelIndex * (SLOT_REEL_5_W + SLOT_REEL_5_GAP);
+  }
+  return SLOT_REEL_1_X + reelIndex * (SLOT_REEL_W + SLOT_REEL_GAP);
+}
+
+static uint16_t slotPaylineColor(uint8_t paylineIndex) {
+  return UI_PAYLINE_COLORS[paylineIndex % SLOT_MAX_PAYLINES];
+}
+
+static uint16_t slotStepIntervalMs(uint8_t reelIndex) {
+  return SLOT_REEL_STEP_MS + reelIndex * 6;
+}
+
+static unsigned long slotReelStopDelayMs(const AppState& app, uint8_t reelIndex) {
+  static const unsigned long kStopDelays3[3] = {900, 1360, 1880};
+  static const unsigned long kStopDelays5[5] = {820, 1120, 1440, 1760, 2100};
+  if (app.slotMode == SLOT_MODE_5) {
+    return kStopDelays5[reelIndex];
+  }
+  return kStopDelays3[reelIndex];
+}
+
+static uint16_t slotAdjustBet(uint16_t currentBet, int direction) {
+  static const uint16_t kBetLevels[] = {10, 25, 50, 100};
+  uint8_t index = 0;
+  while (index + 1 < sizeof(kBetLevels) / sizeof(kBetLevels[0]) && kBetLevels[index] < currentBet) {
+    index++;
+  }
+
+  if (direction < 0) {
+    if (index == 0) {
+      return kBetLevels[0];
+    }
+    return kBetLevels[index - 1];
+  }
+
+  if (index + 1 >= sizeof(kBetLevels) / sizeof(kBetLevels[0])) {
+    return kBetLevels[index];
+  }
+  return kBetLevels[index + 1];
+}
+
+static void initServerApiIfNeeded() {
+  if (serverApiInit) {
+    return;
+  }
+
+  serverApi.begin(SERVER_API_DEFAULT_CONFIG);
+  char id[25];
+  snprintf(id, sizeof(id), "esp8266-%06X", ESP.getChipId());
+  serverApi.setDeviceId(id);
+  serverApiInit = true;
+}
+
+static void resetServerBootstrapState() {
+  serverBootstrapDone = false;
+  serverBootstrapNextAttemptMs = 0;
+  lastObservedServerHealthKnown = false;
+  lastObservedServerHealthOk = false;
+  lastObservedServerAuthorized = false;
+}
+
+static bool canStartServerRequest(const AppState& app) {
+  return app.powerMode == POWER_MODE_NORMAL &&
+         !app.keyboardActive &&
+         !app.buttonAnimActive &&
+         !app.slotSpinActive;
+}
+
+static bool serverOnlySpinMode() {
+  return SERVER_API_NETWORK_ENABLED && SERVER_API_REQUIRE_SERVER_FOR_SPIN;
+}
+
+static void requestServerSlotSpin(AppState& app) {
+  initServerApiIfNeeded();
+
+  if (serverSpinAwaiting) {
+    setSlotStatus(app, "WAIT SERVER");
+    markDirtyRegions(app, DIRTY_GAME_AREA);
+    return;
+  }
+
+  if (app.wifiFlowState != WIFI_FLOW_CONNECTED) {
+    setSlotStatus(app, "CONNECT WIFI");
+    buzzer.playError();
+    markDirtyRegions(app, DIRTY_GAME_AREA);
+    return;
+  }
+
+  if (app.balanceValue < app.slotBetValue) {
+    setSlotStatus(app, "NOT ENOUGH BALANCE");
+    buzzer.playError();
+    markDirtyRegions(app, DIRTY_GAME_AREA);
+    return;
+  }
+
+  serverSpinAwaiting = true;
+  serverSpinAwaitingMode = app.slotMode;
+  app.slotAutoPlayDueMs = 0;
+  setSlotStatus(app, "REQUEST SPIN...");
+  serverApi.prepareForUserSpinRequest();
+  if (!serverApi.requestSpinResult(app.slotMode, app.slotBetValue, app.balanceValue)) {
+    serverSpinAwaiting = false;
+    setSlotStatus(app, "SERVER BUSY");
+    buzzer.playError();
+  }
+  markDirtyRegions(app, DIRTY_GAME_AREA);
+}
+
+static void pollServerApi(AppState& app, unsigned long nowMs) {
+  initServerApiIfNeeded();
+
+  const bool wifiConnected = (wifiService.state() == WIFI_SERVICE_CONNECTED);
+  if (serverSpinAwaiting && !wifiConnected) {
+    serverSpinAwaiting = false;
+    setSlotStatus(app, "CONNECT WIFI");
+    buzzer.playError();
+    markDirtyRegions(app, DIRTY_GAME_AREA);
+  }
+
+  if (!serverSpinAwaiting && app.currentScreen != SCREEN_HOME) {
+    serverApi.cancelBackgroundRequests();
+  }
+
+  if (wifiConnected &&
+      timeService.isTimeValid() &&
+      !serverSpinAwaiting &&
+      app.currentScreen == SCREEN_HOME &&
+      !serverApi.busy() &&
+      (long)(nowMs - serverBootstrapNextAttemptMs) >= 0) {
+    if (!serverApi.healthOk()) {
+      if (serverApi.requestHealth()) {
+        serverBootstrapNextAttemptMs = nowMs + 5000;
+      }
+    } else if (!serverApi.authorized()) {
+      if (serverApi.requestAuth()) {
+        serverBootstrapNextAttemptMs = nowMs + 5000;
+      }
+    } else if (!serverBootstrapDone) {
+      if (serverApi.requestBalance()) {
+        serverBootstrapNextAttemptMs = nowMs + 5000;
+      }
+    }
+  }
+
+  const bool allowServerRequestStart =
+    canStartServerRequest(app) &&
+    (serverSpinAwaiting || app.currentScreen == SCREEN_HOME);
+  serverApi.tick(wifiConnected, nowMs, allowServerRequestStart);
+
+  SlotSpinResult serverResult;
+  if (serverSpinAwaiting && serverApi.consumeSpinResult(serverSpinAwaitingMode, serverResult)) {
+    serverSpinAwaiting = false;
+    beginSlotSpinWithResult(app, serverResult);
+    return;
+  }
+
+  if (serverSpinAwaiting &&
+      !serverApi.spinRequestPending(serverSpinAwaitingMode) &&
+      serverApi.lastStatus() != SERVER_API_LAST_QUEUED &&
+      serverApi.lastStatus() != SERVER_API_LAST_IN_FLIGHT) {
+    serverSpinAwaiting = false;
+    setSlotStatus(app, "SERVER ERROR");
+    buzzer.playError();
+    markDirtyRegions(app, DIRTY_GAME_AREA);
+  }
+
+  int serverBalance = 0;
+  bool consumedServerBalance = false;
+  if (!app.slotSpinActive &&
+      (serverOnlySpinMode() || app.currentScreen != SCREEN_GAME) &&
+      serverApi.consumeBalance(serverBalance)) {
+    consumedServerBalance = serverBalance >= 0;
+    if (consumedServerBalance && app.balanceValue != serverBalance) {
+      app.balanceValue = serverBalance;
+      markDirtyRegions(app, DIRTY_BALANCE_CARD);
+    }
+  }
+
+  if (consumedServerBalance &&
+      serverApi.authorized() &&
+      app.currentScreen == SCREEN_HOME &&
+      !serverBootstrapDone) {
+    serverBootstrapDone = true;
+    markDirtyRegions(app, DIRTY_WIFI_BADGE | DIRTY_BALANCE_CARD);
+  }
+
+  if (serverApi.healthKnown() != lastObservedServerHealthKnown ||
+      serverApi.healthOk() != lastObservedServerHealthOk) {
+    lastObservedServerHealthKnown = serverApi.healthKnown();
+    lastObservedServerHealthOk = serverApi.healthOk();
+    markDirtyRegions(app, DIRTY_WIFI_BADGE);
+  }
+
+  if (serverApi.authorized() != lastObservedServerAuthorized) {
+    lastObservedServerAuthorized = serverApi.authorized();
+    markDirtyRegions(app, DIRTY_WIFI_BADGE);
+  }
+}
+
+static void resetSlotPresentation(AppState& app) {
+  app.slotWinningLineCount = 0;
+  app.slotDisplayedWinningLine = 0;
+  app.slotRemainingWinningLineShows = 0;
+  app.slotPaylineOverlayVisible = false;
+  app.slotPaylineOverlayNextMs = 0;
+}
+
+static void configureSlotMode(AppState& app, SlotMode mode) {
+  app.slotMode = mode;
+  app.slotSpinActive = false;
+  serverSpinAwaiting = false;
+  app.slotAutoPlayDueMs = 0;
+  if (mode != SLOT_MODE_3 || serverOnlySpinMode()) {
+    app.slotAutoPlayEnabled = false;
+  }
+  resetSlotPresentation(app);
+  setSlotStatus(app, "PRESS SPIN");
+
+  const uint8_t reelCount = slotModeReelCount(mode);
+  const uint8_t rowCount = slotModeRowCount(mode);
+  for (uint8_t reel = 0; reel < SLOT_MAX_REELS; reel++) {
+    app.reelSpinning[reel] = false;
+    app.reelLastAdvanceMs[reel] = 0;
+    app.reelStopAtMs[reel] = 0;
+    app.reelSymbols[reel] = (SlotSymbol)(reel % SLOT_SYMBOL_COUNT);
+    app.reelTargetSymbols[reel] = app.reelSymbols[reel];
+    for (uint8_t row = 0; row < SLOT_MAX_ROWS; row++) {
+      const SlotSymbol symbol = (SlotSymbol)((reel + row) % SLOT_SYMBOL_COUNT);
+      app.reelWindowSymbols[row][reel] = symbol;
+      app.reelTargetWindowSymbols[row][reel] = symbol;
+    }
+  }
+
+  if (mode == SLOT_MODE_3) {
+    for (uint8_t reel = 0; reel < reelCount; reel++) {
+      app.reelWindowSymbols[0][reel] = app.reelSymbols[reel];
+      app.reelTargetWindowSymbols[0][reel] = app.reelSymbols[reel];
+    }
+  } else {
+    for (uint8_t reel = 0; reel < reelCount; reel++) {
+      app.reelSymbols[reel] = app.reelWindowSymbols[1][reel];
+      app.reelTargetSymbols[reel] = app.reelSymbols[reel];
+      for (uint8_t row = rowCount; row < SLOT_MAX_ROWS; row++) {
+        app.reelWindowSymbols[row][reel] = SLOT_SYMBOL_CHERRY;
+        app.reelTargetWindowSymbols[row][reel] = SLOT_SYMBOL_CHERRY;
+      }
+    }
+  }
+
+  app.gameCacheValid = false;
+  markDirtyRegions(app, DIRTY_GAME_AREA);
+}
+
+static bool slotAllReelsStopped(const AppState& app) {
+  for (uint8_t i = 0; i < slotActiveReelCount(app); i++) {
+    if (app.reelSpinning[i]) {
+      return false;
+    }
+  }
+  return true;
+}
+
+static SlotSpinResult slotFinalSpinResult(const AppState& app) {
+  SlotSpinResult result;
+  memset(&result, 0, sizeof(result));
+  result.mode = app.slotMode;
+  result.reelCount = slotActiveReelCount(app);
+  result.rowCount = slotActiveRowCount(app);
+  for (uint8_t row = 0; row < result.rowCount; row++) {
+    for (uint8_t reel = 0; reel < result.reelCount; reel++) {
+      result.symbols[row][reel] = app.reelTargetWindowSymbols[row][reel];
+    }
+  }
+  return result;
+}
+
+static void finishSlotSpin(AppState& app) {
+  app.slotSpinActive = false;
+  const SlotSpinResult finalResult = slotFinalSpinResult(app);
+  const SlotOutcome outcome = evaluateSpinResult(finalResult);
+  const int payout = outcome.isWin ? (int)(app.slotBetValue * outcome.payoutMultiplier) : 0;
+  app.slotLastPayout = payout;
+  resetSlotPresentation(app);
+  app.slotWinningLineCount = outcome.lineWinCount;
+  for (uint8_t i = 0; i < outcome.lineWinCount && i < SLOT_MAX_PAYLINES; i++) {
+    app.slotWinningLines[i] = outcome.lineWins[i].paylineIndex;
+  }
+  if (outcome.lineWinCount > 0) {
+    app.slotPaylineOverlayVisible = true;
+    app.slotRemainingWinningLineShows = 0;
+    app.slotPaylineOverlayNextMs = 0;
+  }
+
+  if (outcome.isWin) {
+    app.balanceValue += payout;
+    app.winsCount += 1;
+    char status[33];
+    snprintf(status, sizeof(status), "PAYOUT $%d", payout);
+    setSlotStatus(app, status);
+    if (outcome.isJackpot) {
+      buzzer.playJackpot();
+    } else {
+      buzzer.playWinSmall();
+    }
+    markDirtyRegions(app, DIRTY_BALANCE_CARD | DIRTY_WINS_CARD);
+  } else {
+    setSlotStatus(app, "NO WIN - TRY AGAIN");
+    buzzer.playLose();
+  }
+
+  if (!serverOnlySpinMode() &&
+      app.slotMode == SLOT_MODE_3 &&
+      app.slotAutoPlayEnabled &&
+      app.balanceValue >= app.slotBetValue) {
+    app.slotAutoPlayDueMs = millis() + SLOT_AUTOPLAY_DELAY_MS;
+  } else {
+    app.slotAutoPlayDueMs = 0;
+  }
+
+  markDirtyRegions(app, DIRTY_GAME_AREA);
+}
+
+static void beginSlotSpinWithResult(AppState& app, const SlotSpinResult& requestedResult) {
+  const unsigned long nowMs = millis();
+  app.balanceValue -= app.slotBetValue;
+  app.slotLastPayout = 0;
+  app.slotSpinActive = true;
+  app.slotAutoPlayDueMs = 0;
+  app.slotSpinStartedAtMs = nowMs;
+  resetSlotPresentation(app);
+  setSlotStatus(app, "SPINNING...");
+
+  for (uint8_t i = 0; i < slotActiveReelCount(app); i++) {
+    app.reelTargetSymbols[i] = requestedResult.symbols[(requestedResult.rowCount > 1) ? 1 : 0][i];
+    app.reelSpinning[i] = true;
+    app.reelLastAdvanceMs[i] = nowMs;
+    app.reelStopAtMs[i] = nowMs + slotReelStopDelayMs(app, i);
+    for (uint8_t row = 0; row < slotActiveRowCount(app); row++) {
+      app.reelTargetWindowSymbols[row][i] = requestedResult.symbols[row][i];
+    }
+  }
+
+  buzzer.playSpinStart();
+  markDirtyRegions(app, DIRTY_GAME_AREA | DIRTY_BALANCE_CARD);
+}
+
+static void startSlotSpin(AppState& app) {
+  if (app.slotSpinActive) {
+    return;
+  }
+
+  if (serverOnlySpinMode()) {
+    requestServerSlotSpin(app);
+    return;
+  }
+
+  if (app.balanceValue < app.slotBetValue) {
+    setSlotStatus(app, "NOT ENOUGH BALANCE");
+    buzzer.playError();
+    markDirtyRegions(app, DIRTY_GAME_AREA);
+    return;
+  }
+
+  beginSlotSpinWithResult(app, determineSpinResult(app.slotMode));
+}
+
+static bool tickSlotMachine(AppState& app, unsigned long nowMs) {
+  if (!app.slotSpinActive &&
+      app.currentScreen == SCREEN_GAME &&
+      app.slotMode == SLOT_MODE_3 &&
+      app.slotAutoPlayEnabled &&
+      app.slotAutoPlayDueMs != 0 &&
+      (long)(nowMs - app.slotAutoPlayDueMs) >= 0) {
+    startSlotSpin(app);
+    return true;
+  }
+
+  if (!app.slotSpinActive) {
+    return false;
+  }
+
+  bool changed = false;
+  for (uint8_t i = 0; i < slotActiveReelCount(app); i++) {
+    if (!app.reelSpinning[i]) {
+      continue;
+    }
+
+    const uint16_t intervalMs = slotStepIntervalMs(i);
+    while ((long)(nowMs - app.reelLastAdvanceMs[i]) >= (long)intervalMs && nowMs < app.reelStopAtMs[i]) {
+      app.reelLastAdvanceMs[i] += intervalMs;
+      app.reelSymbols[i] = randomSlotSymbol();
+      for (uint8_t row = 0; row < slotActiveRowCount(app); row++) {
+        app.reelWindowSymbols[row][i] = randomSlotSymbol();
+      }
+      changed = true;
+    }
+
+    if ((long)(nowMs - app.reelStopAtMs[i]) >= 0) {
+      app.reelSymbols[i] = app.reelTargetSymbols[i];
+      for (uint8_t row = 0; row < slotActiveRowCount(app); row++) {
+        app.reelWindowSymbols[row][i] = app.reelTargetWindowSymbols[row][i];
+      }
+      app.reelSpinning[i] = false;
+      app.reelLastAdvanceMs[i] = nowMs;
+      buzzer.playReelStop();
+      changed = true;
+    }
+  }
+
+  if (changed) {
+    markDirtyRegions(app, DIRTY_GAME_AREA);
+  }
+
+  if (slotAllReelsStopped(app)) {
+    finishSlotSpin(app);
+  }
+
+  return changed;
+}
+
 static void queueScreenAction(AppState& app, PendingAction action, ButtonAnimTarget target) {
   app.buttonAnimActive = true;
   app.buttonAnimPressedDrawn = false;
@@ -880,6 +1427,9 @@ static void applyPendingAction(AppState& app) {
       break;
     case ACTION_GOTO_MENU:
       app.currentScreen = SCREEN_MENU;
+      break;
+    case ACTION_GOTO_MODE_SELECT:
+      app.currentScreen = SCREEN_MODE_SELECT;
       break;
     case ACTION_GOTO_GAME:
       app.currentScreen = SCREEN_GAME;
@@ -1063,6 +1613,7 @@ static void forceHomeState(AppState& app) {
   app.buttonAnimPressedDrawn = false;
   app.buttonAnimTarget = BTN_ANIM_NONE;
   app.pendingAction = ACTION_NONE;
+  serverSpinAwaiting = false;
   app.uiBusy = false;
   app.uiStatusVisible = false;
   app.uiStatusText[0] = '\0';
@@ -1080,6 +1631,7 @@ static void enterSleepMode(AppState& app) {
   app.buttonAnimPressedDrawn = false;
   app.buttonAnimTarget = BTN_ANIM_NONE;
   app.pendingAction = ACTION_NONE;
+  serverSpinAwaiting = false;
   app.uiBusy = false;
   app.uiStatusVisible = false;
   app.uiStatusText[0] = '\0';
@@ -1105,6 +1657,7 @@ static void enterStandbyMode(AppState& app) {
   app.buttonAnimTarget = BTN_ANIM_NONE;
   app.pendingAction = ACTION_NONE;
   app.keyboardActive = false;
+  serverSpinAwaiting = false;
   app.keyboardNeedsInit = true;
   app.keyboardTarget = INPUT_TARGET_NONE;
   app.uiBusy = false;
@@ -1116,6 +1669,8 @@ static void enterStandbyMode(AppState& app) {
   wifiAutoReconnectEnabled = false;
   wifiReconnectNextPollMs = 0;
   wifiService.disconnect();
+  serverApi.resetSession();
+  resetServerBootstrapState();
   if (app.ssid[0] != '\0') {
     app.wifiFlowState = WIFI_FLOW_DISCONNECTED;
   } else {
@@ -1187,6 +1742,7 @@ static void handlePostedEvent(AppState& app, const AppEvent& event) {
       strncpy(app.gameStateText, event.text, sizeof(app.gameStateText) - 1);
       app.gameStateText[sizeof(app.gameStateText) - 1] = '\0';
       noteInteraction(app);
+      markDirtyRegions(app, DIRTY_GAME_AREA);
       break;
     case APP_EVENT_NONE:
       break;
@@ -1222,7 +1778,8 @@ static void drawAnimatedButton(SimpleUI& ui, ButtonAnimTarget target, bool press
 }
 
 static bool isBackOnlyScreen(ScreenState screen) {
-  return screen == SCREEN_GAME ||
+  return screen == SCREEN_MODE_SELECT ||
+         screen == SCREEN_GAME ||
          screen == SCREEN_BALANCE ||
          screen == SCREEN_PROFILE ||
          screen == SCREEN_TOPUP ||
@@ -1356,8 +1913,32 @@ void initAppState(AppState& app) {
   app.powerMode = POWER_MODE_NORMAL;
   app.balanceReturnScreen = SCREEN_GAME;
   app.testSongRequested = false;
+  app.modeSelectIndex = 0;
+  app.slotAutoPlayEnabled = false;
+  app.slotAutoPlayDueMs = 0;
+  app.slotBetValue = 25;
+  app.slotLastPayout = 0;
+  app.slotSpinStartedAtMs = 0;
+  for (uint8_t i = 0; i < SLOT_MAX_REELS; i++) {
+    app.lastDrawnReelSymbols[i] = (SlotSymbol)SLOT_SYMBOL_COUNT;
+    app.lastDrawnReelSpinning[i] = true;
+    for (uint8_t row = 0; row < SLOT_MAX_ROWS; row++) {
+      app.lastDrawnReelWindowSymbols[row][i] = (SlotSymbol)SLOT_SYMBOL_COUNT;
+    }
+  }
+  app.lastDrawnSlotStatusText[0] = '\0';
+  app.lastDrawnSlotBetValue = UINT16_MAX;
+  app.lastDrawnSlotPayout = INT32_MIN;
+  app.lastDrawnSlotSpinActive = true;
+  app.lastDrawnSlotFooterSpinActive = true;
+  app.lastDrawnSlotAutoPlayEnabled = true;
+  app.lastDrawnSlotMode = SLOT_MODE_5;
+  app.lastDrawnWinningLineCount = UINT8_MAX;
+  app.lastDrawnDisplayedWinningLine = UINT8_MAX;
+  app.lastDrawnPaylineOverlayVisible = false;
 
   app.gameCacheValid = false;
+  configureSlotMode(app, SLOT_MODE_3);
 
   resetStartupAutoConnectState();
 
@@ -1766,15 +2347,330 @@ static void updateSettingsRegions(TFT_eSPI& tft, SimpleUI& ui, AppState& app, ui
   app.settingsCacheValid = true;
 }
 
-static void updateGameArea(TFT_eSPI& tft, SimpleUI& ui, AppState& app, bool force) {
-  if (!force && app.gameCacheValid) {
+static const uint16_t* slotIconForSymbol(SlotSymbol symbol) {
+  switch (symbol) {
+    case SLOT_SYMBOL_CHERRY:
+      return slot_icon_cherry;
+    case SLOT_SYMBOL_LEMON:
+      return slot_icon_lemon;
+    case SLOT_SYMBOL_BELL:
+      return slot_icon_bell;
+    case SLOT_SYMBOL_STAR:
+      return slot_icon_star;
+    case SLOT_SYMBOL_DIAMOND:
+      return slot_icon_diamond;
+    case SLOT_SYMBOL_SEVEN:
+      return slot_icon_seven;
+  }
+  return slot_icon_seven;
+}
+
+static void drawSlotIconBitmap(TFT_eSPI& tft, SlotSymbol symbol, int x, int y, int size, uint16_t transparentColor) {
+  const uint16_t* icon = slotIconForSymbol(symbol);
+  for (int yy = 0; yy < size; yy++) {
+    const int srcY = (yy * SLOT_ICON_SIZE) / size;
+    for (int xx = 0; xx < size; xx++) {
+      const int srcX = (xx * SLOT_ICON_SIZE) / size;
+      const uint16_t color = pgm_read_word(&icon[srcY * SLOT_ICON_SIZE + srcX]);
+      if (color != transparentColor) {
+        const uint16_t correctedColor =
+          (uint16_t)(((color & 0x001F) << 11) | (color & 0x07E0) | ((color & 0xF800) >> 11));
+        tft.drawPixel(x + xx, y + yy, correctedColor);
+      }
+    }
+  }
+}
+
+static void drawSlotSymbol(TFT_eSPI& tft, SlotSymbol symbol, int centerX, int centerY, int sizeVariant, uint16_t bgColor) {
+  const int iconSize = sizeVariant > 0 ? sizeVariant : SLOT_ICON_SIZE;
+  const int iconX = centerX - iconSize / 2;
+  const int iconY = centerY - iconSize / 2;
+  tft.fillRect(iconX, iconY, iconSize, iconSize, bgColor);
+  drawSlotIconBitmap(tft, symbol, iconX, iconY, iconSize, 0x0000);
+}
+
+static void drawSlotMachineShell(TFT_eSPI& tft, SimpleUI& ui, const AppState& app) {
+  tft.fillRect(SLOT_PANEL_X, SLOT_PANEL_Y, SLOT_PANEL_W, SLOT_PANEL_H, UI_PANEL);
+  tft.drawRect(SLOT_PANEL_X, SLOT_PANEL_Y, SLOT_PANEL_W, SLOT_PANEL_H, UI_GOLD);
+  tft.drawRect(SLOT_PANEL_X + 2, SLOT_PANEL_Y + 2, SLOT_PANEL_W - 4, SLOT_PANEL_H - 4, UI_GOLD_SOFT);
+  if (app.slotMode == SLOT_MODE_3) {
+    tft.drawFastHLine(SLOT_PANEL_X + 18, 154, SLOT_PANEL_W - 36, UI_GOLD_SOFT);
+    ui.drawCenteredTextInRect("BET", 62, SLOT_BET_LABEL_Y - 8, 56, 16, UI_TEXT_MUTED, UI_PANEL, 1);
+  }
+}
+
+static void drawSlotReel3(TFT_eSPI& tft, AppState& app, uint8_t reelIndex, int x) {
+  const int y = SLOT_REEL_Y;
+  const uint16_t frameColor = app.reelSpinning[reelIndex] ? UI_WARNING : UI_GOLD;
+  const int innerX = x + 4;
+  const int innerY = y + 4;
+  const int innerW = SLOT_REEL_W - 8;
+  const int innerH = SLOT_REEL_H - 8;
+  const int centerX = x + SLOT_REEL_W / 2;
+  const int centerY = y + SLOT_REEL_H / 2;
+
+  tft.fillRect(x, y, SLOT_REEL_W, SLOT_REEL_H, UI_GOLD_SOFT);
+  tft.drawRect(x, y, SLOT_REEL_W, SLOT_REEL_H, frameColor);
+  tft.drawRect(x + 1, y + 1, SLOT_REEL_W - 2, SLOT_REEL_H - 2, UI_GOLD);
+  tft.fillRect(innerX, innerY, innerW, innerH, UI_SLOT_BLACK);
+  tft.drawFastHLine(innerX, centerY - 18, innerW, UI_BORDER_SOFT);
+  tft.drawFastHLine(innerX, centerY + 18, innerW, UI_BORDER_SOFT);
+  drawSlotSymbol(tft, app.reelSymbols[reelIndex], centerX, centerY, 32, UI_SLOT_BLACK);
+}
+
+static void drawSlotReel5(TFT_eSPI& tft, AppState& app, uint8_t reelIndex, int x) {
+  const int y = SLOT_REEL_5_Y;
+  const uint16_t frameColor = app.reelSpinning[reelIndex] ? UI_WARNING : UI_GOLD;
+  const int innerX = x + 3;
+  const int innerY = y + 3;
+  const int innerW = SLOT_REEL_5_W - 6;
+
+  tft.fillRect(x, y, SLOT_REEL_5_W, SLOT_REEL_5_H, UI_GOLD_SOFT);
+  tft.drawRect(x, y, SLOT_REEL_5_W, SLOT_REEL_5_H, frameColor);
+  tft.drawRect(x + 1, y + 1, SLOT_REEL_5_W - 2, SLOT_REEL_5_H - 2, UI_GOLD);
+
+  for (uint8_t row = 0; row < 3; row++) {
+    const int cellY = innerY + row * (SLOT_REEL_5_ROW_H + SLOT_REEL_5_ROW_GAP);
+    tft.fillRect(innerX, cellY, innerW, SLOT_REEL_5_ROW_H, UI_SLOT_BLACK);
+    tft.drawRect(innerX, cellY, innerW, SLOT_REEL_5_ROW_H, UI_BORDER_SOFT);
+    drawSlotSymbol(tft,
+                   app.reelWindowSymbols[row][reelIndex],
+                   innerX + innerW / 2,
+                   cellY + SLOT_REEL_5_ROW_H / 2,
+                   24,
+                   UI_SLOT_BLACK);
+  }
+}
+
+static void clearSlot5OverlayRegion(TFT_eSPI& tft) {
+  const int clearX = SLOT_REEL_5_1_X - 2;
+  const int clearY = SLOT_REEL_5_Y - 2;
+  const int clearW = (SLOT_REEL_5_W * 5) + (SLOT_REEL_5_GAP * 4) + 4;
+  const int clearH = SLOT_REEL_5_H + 4;
+  tft.fillRect(clearX, clearY, clearW, clearH, UI_PANEL);
+}
+
+static bool slotOverlayStateChanged(const AppState& app) {
+  return app.lastDrawnWinningLineCount != app.slotWinningLineCount ||
+         app.lastDrawnDisplayedWinningLine != app.slotDisplayedWinningLine ||
+         app.lastDrawnPaylineOverlayVisible != app.slotPaylineOverlayVisible;
+}
+
+static void drawSlotPaylineOverlay(TFT_eSPI& tft, const AppState& app) {
+  if (app.slotMode != SLOT_MODE_5 || !app.slotPaylineOverlayVisible || app.slotWinningLineCount == 0) {
     return;
   }
 
-  clearValueArea(tft, 32, 70, 256, 66);
-  ui.drawCenteredText("Game area", SCREEN_W / 2, 92, UI_TEXT, UI_PANEL, 2);
-  ui.drawCenteredText("core mechanics unchanged", SCREEN_W / 2, 116, UI_TEXT_MUTED, UI_PANEL, 1);
+  for (uint8_t winIndex = 0; winIndex < app.slotWinningLineCount; winIndex++) {
+    const uint8_t activeIndex = app.slotWinningLines[winIndex];
+    const uint8_t* line = slotPayline(activeIndex);
+    if (line == nullptr) {
+      continue;
+    }
+
+    const uint16_t color = slotPaylineColor(activeIndex);
+    for (uint8_t reel = 0; reel < 5; reel++) {
+      const int reelX = slotReelXForMode(app, reel);
+      const int centerX = reelX + SLOT_REEL_5_W / 2;
+      const int centerY = SLOT_REEL_5_Y + 3 + line[reel] * (SLOT_REEL_5_ROW_H + SLOT_REEL_5_ROW_GAP) + SLOT_REEL_5_ROW_H / 2;
+      tft.fillCircle(centerX, centerY, 3, color);
+      if (reel > 0) {
+        const int prevX = slotReelXForMode(app, reel - 1) + SLOT_REEL_5_W / 2;
+        const int prevY = SLOT_REEL_5_Y + 3 + line[reel - 1] * (SLOT_REEL_5_ROW_H + SLOT_REEL_5_ROW_GAP) + SLOT_REEL_5_ROW_H / 2;
+        tft.drawLine(prevX, prevY, centerX, centerY, color);
+        tft.drawLine(prevX, prevY + 1, centerX, centerY + 1, color);
+      }
+    }
+  }
+}
+
+static void updateSlotStatusArea(TFT_eSPI& tft, SimpleUI& ui, AppState& app, bool force) {
+  if (!force && strcmp(app.slotStatusText, app.lastDrawnSlotStatusText) == 0) {
+    return;
+  }
+  tft.fillRect(SLOT_STATUS_X, SLOT_STATUS_Y, SLOT_STATUS_W, SLOT_STATUS_H, UI_SLOT_BLACK);
+  tft.drawRect(SLOT_STATUS_X, SLOT_STATUS_Y, SLOT_STATUS_W, SLOT_STATUS_H, UI_BORDER_SOFT);
+  ui.drawCenteredTextInRect(app.slotStatusText, SLOT_STATUS_X + 2, SLOT_STATUS_Y + 1,
+                            SLOT_STATUS_W - 4, SLOT_STATUS_H - 2,
+                            app.slotSpinActive ? UI_WARNING : UI_TEXT, UI_SLOT_BLACK, 1);
+  strncpy(app.lastDrawnSlotStatusText, app.slotStatusText, sizeof(app.lastDrawnSlotStatusText) - 1);
+  app.lastDrawnSlotStatusText[sizeof(app.lastDrawnSlotStatusText) - 1] = '\0';
+}
+
+static void updateSlotReels(TFT_eSPI& tft, AppState& app, bool force) {
+  const bool overlayChanged = slotOverlayStateChanged(app);
+  const bool clearOverlayByRedraw =
+    (app.slotMode == SLOT_MODE_5) &&
+    overlayChanged &&
+    app.lastDrawnPaylineOverlayVisible &&
+    !app.slotPaylineOverlayVisible;
+  const uint8_t reelCount = slotActiveReelCount(app);
+  const uint8_t rowCount = slotActiveRowCount(app);
+
+  if (clearOverlayByRedraw) {
+    clearSlot5OverlayRegion(tft);
+  }
+
+  for (uint8_t i = 0; i < reelCount; i++) {
+    bool reelChanged = force || clearOverlayByRedraw ||
+      app.lastDrawnReelSymbols[i] != app.reelSymbols[i] ||
+      app.lastDrawnReelSpinning[i] != app.reelSpinning[i];
+
+    if (app.slotMode == SLOT_MODE_5) {
+      for (uint8_t row = 0; row < rowCount; row++) {
+        if (app.lastDrawnReelWindowSymbols[row][i] != app.reelWindowSymbols[row][i]) {
+          reelChanged = true;
+          break;
+        }
+      }
+    }
+
+    if (!reelChanged) {
+      continue;
+    }
+
+    const int reelX = slotReelXForMode(app, i);
+    if (app.slotMode == SLOT_MODE_5) {
+      drawSlotReel5(tft, app, i, reelX);
+    } else {
+      drawSlotReel3(tft, app, i, reelX);
+    }
+
+    app.lastDrawnReelSymbols[i] = app.reelSymbols[i];
+    app.lastDrawnReelSpinning[i] = app.reelSpinning[i];
+    for (uint8_t row = 0; row < rowCount; row++) {
+      app.lastDrawnReelWindowSymbols[row][i] = app.reelWindowSymbols[row][i];
+    }
+  }
+
+  if (app.slotMode == SLOT_MODE_5) {
+    drawSlotPaylineOverlay(tft, app);
+    app.lastDrawnWinningLineCount = app.slotWinningLineCount;
+    app.lastDrawnDisplayedWinningLine = app.slotDisplayedWinningLine;
+    app.lastDrawnPaylineOverlayVisible = app.slotPaylineOverlayVisible;
+  }
+}
+
+static void drawSlotBetBox(TFT_eSPI& tft, int x, int y, int w, int h, const char* text) {
+  tft.fillRect(x, y, w, h, UI_PANEL_ALT);
+  tft.drawRect(x, y, w, h, UI_GOLD_SOFT);
+  tft.setTextDatum(MC_DATUM);
+  tft.setTextColor(UI_TEXT, UI_PANEL_ALT);
+  tft.drawString(text, x + w / 2, y + h / 2, 2);
+  tft.setTextDatum(TL_DATUM);
+}
+
+static void updateSlotBetControls(TFT_eSPI& tft, AppState& app, bool force) {
+  if (!force &&
+      app.lastDrawnSlotBetValue == app.slotBetValue &&
+      app.lastDrawnSlotMode == app.slotMode) {
+    return;
+  }
+
+  const int controlsWidth = (app.slotMode == SLOT_MODE_3)
+    ? (SLOT_AUTO_X + SLOT_AUTO_W - SLOT_MINUS_X)
+    : (SLOT_PLUS_X + SLOT_PLUS_W - SLOT_MINUS_X);
+  tft.fillRect(SLOT_MINUS_X, SLOT_MINUS_Y, controlsWidth, SLOT_MINUS_H, UI_PANEL);
+  drawSlotBetBox(tft, SLOT_MINUS_X, SLOT_MINUS_Y, SLOT_MINUS_W, SLOT_MINUS_H, "-");
+
+  char betText[16];
+  snprintf(betText, sizeof(betText), "$%u", (unsigned)app.slotBetValue);
+  drawSlotBetBox(tft, SLOT_BET_BOX_X, SLOT_BET_BOX_Y, SLOT_BET_BOX_W, SLOT_BET_BOX_H, betText);
+  drawSlotBetBox(tft, SLOT_PLUS_X, SLOT_PLUS_Y, SLOT_PLUS_W, SLOT_PLUS_H, "+");
+  app.lastDrawnSlotBetValue = app.slotBetValue;
+  app.lastDrawnSlotMode = app.slotMode;
+}
+
+static void updateSlotAutoButton(SimpleUI& ui, AppState& app, bool force) {
+  if (app.slotMode != SLOT_MODE_3) {
+    return;
+  }
+
+  btnGameAuto.color = app.slotAutoPlayEnabled ? UI_SUCCESS : UI_PANEL_ALT;
+  btnGameAuto.pressedColor = app.slotAutoPlayEnabled ? UI_SUCCESS_PRESSED : UI_SECONDARY_PRESSED;
+  btnGameAuto.text = app.slotAutoPlayEnabled ? "AUTO" : "AUTO";
+
+  if (!force && app.lastDrawnSlotAutoPlayEnabled == app.slotAutoPlayEnabled) {
+    return;
+  }
+
+  ui.drawButton(btnGameAuto);
+  app.lastDrawnSlotAutoPlayEnabled = app.slotAutoPlayEnabled;
+}
+
+static void updateSlotSpinButton(SimpleUI& ui, AppState& app, bool force) {
+  if (serverSpinAwaiting) {
+    btnGameSpin.color = UI_NEUTRAL;
+    btnGameSpin.pressedColor = UI_NEUTRAL_PRESSED;
+    btnGameSpin.text = "WAIT";
+  } else if (app.slotSpinActive) {
+    btnGameSpin.color = UI_NEUTRAL;
+    btnGameSpin.pressedColor = UI_NEUTRAL_PRESSED;
+    btnGameSpin.text = "SPIN";
+  } else {
+    btnGameSpin.color = UI_SLOT_RED;
+    btnGameSpin.pressedColor = UI_SLOT_RED_PRESSED;
+    btnGameSpin.text = "SPIN";
+  }
+
+  if (!force &&
+      app.lastDrawnSlotSpinActive == app.slotSpinActive &&
+      lastDrawnServerSpinAwaiting == serverSpinAwaiting) {
+    return;
+  }
+
+  ui.drawButton(btnGameSpin);
+  app.lastDrawnSlotSpinActive = app.slotSpinActive;
+  lastDrawnServerSpinAwaiting = serverSpinAwaiting;
+}
+
+static void updateSlotFooter(TFT_eSPI& tft, SimpleUI& ui, AppState& app, bool force) {
+  (void)tft;
+  (void)ui;
+  if (!force &&
+      app.lastDrawnSlotPayout == app.slotLastPayout &&
+      app.lastDrawnSlotFooterSpinActive == app.slotSpinActive) {
+    return;
+  }
+
+  app.lastDrawnSlotPayout = app.slotLastPayout;
+  app.lastDrawnSlotFooterSpinActive = app.slotSpinActive;
+}
+
+static void updateGameArea(TFT_eSPI& tft, SimpleUI& ui, AppState& app, bool force) {
+  if (force || !app.gameCacheValid) {
+    drawSlotMachineShell(tft, ui, app);
+  }
+  updateSlotStatusArea(tft, ui, app, force || !app.gameCacheValid);
+  updateSlotReels(tft, app, force || !app.gameCacheValid);
+  updateSlotBetControls(tft, app, force || !app.gameCacheValid);
+  updateSlotAutoButton(ui, app, force || !app.gameCacheValid);
+  updateSlotFooter(tft, ui, app, force || !app.gameCacheValid);
+  updateSlotSpinButton(ui, app, force || !app.gameCacheValid);
   app.gameCacheValid = true;
+}
+
+static void drawHomeServerStatus(TFT_eSPI& tft, SimpleUI& ui) {
+  const bool known = serverApi.healthKnown();
+  const bool ok = serverApi.healthOk();
+  char text[32];
+  if (serverApi.authorized()) {
+    snprintf(text, sizeof(text), "%s", serverApi.userName());
+  } else {
+    snprintf(text, sizeof(text), "%s", known ? (ok ? "SERVER OK" : "SERVER ERROR") : "SERVER ...");
+  }
+  const uint16_t color = known ? (ok ? UI_SUCCESS : UI_ERROR) : UI_WARNING;
+
+  tft.fillRect(HOME_SERVER_STATUS_X, HOME_SERVER_STATUS_Y,
+               HOME_SERVER_STATUS_W, HOME_SERVER_STATUS_H, UI_PANEL);
+  tft.drawRect(HOME_SERVER_STATUS_X, HOME_SERVER_STATUS_Y,
+               HOME_SERVER_STATUS_W, HOME_SERVER_STATUS_H, UI_BORDER_SOFT);
+  ui.drawCenteredTextInRect(text,
+                            HOME_SERVER_STATUS_X + 2,
+                            HOME_SERVER_STATUS_Y + 1,
+                            HOME_SERVER_STATUS_W - 4,
+                            HOME_SERVER_STATUS_H - 2,
+                            color, UI_PANEL, 1);
 }
 
 static void drawHomeScreen(TFT_eSPI& tft, SimpleUI& ui) {
@@ -1785,8 +2681,29 @@ static void drawHomeScreen(TFT_eSPI& tft, SimpleUI& ui) {
   tft.drawFastHLine(HOME_BG_X + 16, HOME_BG_Y + 28, HOME_BG_W - 32, UI_BORDER_SOFT);
   ui.drawCenteredText("HOME", SCREEN_W / 2, 34, UI_TEXT_MUTED, UI_PANEL, 1);
   ui.drawCenteredText("device home screen", SCREEN_W / 2, 122, UI_TEXT_MUTED, UI_PANEL, 1);
+  drawHomeServerStatus(tft, ui);
   ui.drawButton(btnHomePlay);
   ui.drawButton(btnHomeMenu);
+}
+
+static void drawModeSelectCard(TFT_eSPI& tft, SimpleUI& ui, const UIButton& btn,
+                               const char* title, const char* subtitle, bool selected) {
+  const uint16_t fill = selected ? UI_SUCCESS : UI_PANEL;
+  const uint16_t border = selected ? UI_GOLD : UI_BORDER;
+  tft.fillRect(btn.x, btn.y, btn.w, btn.h, fill);
+  tft.drawRect(btn.x, btn.y, btn.w, btn.h, border);
+  tft.drawRect(btn.x + 2, btn.y + 2, btn.w - 4, btn.h - 4, selected ? UI_GOLD_SOFT : UI_BORDER_SOFT);
+  ui.drawCenteredTextInRect(title, btn.x + 8, btn.y + 6, btn.w - 16, 20, UI_TEXT, fill, 2);
+  ui.drawCenteredTextInRect(subtitle, btn.x + 8, btn.y + 30, btn.w - 16, 16, UI_TEXT_MUTED, fill, 1);
+}
+
+static void drawModeSelectScreen(TFT_eSPI& tft, SimpleUI& ui, AppState& app) {
+  drawScreenBase(tft);
+  ui.drawHeaderBar("MODE SELECT", UI_TEXT);
+  ui.drawCenteredTextInRect("Choose the game mode", 60, 44, 200, 16, UI_TEXT_MUTED, UI_BG, 1);
+  drawModeSelectCard(tft, ui, btnModeClassic, "Classic", "3 reels / autoplay", app.modeSelectIndex == 0);
+  drawModeSelectCard(tft, ui, btnModeAdvanced, "Advanced", "5 reels / paylines", app.modeSelectIndex == 1);
+  ui.drawButton(btnBack);
 }
 
 // ---------------------------
@@ -1815,8 +2732,6 @@ static void drawGameScreen(TFT_eSPI& tft, SimpleUI& ui, AppState& app) {
   drawGameBalanceEntry(tft, ui, app, true);
   yield();
 
-  drawCard(ui, 30, 68, 260, 70);
-  yield();
   updateGameArea(tft, ui, app, true);
   yield();
 
@@ -1937,6 +2852,9 @@ void drawCurrentScreen(TFT_eSPI& tft, SimpleUI& ui, AppState& app) {
     case SCREEN_MENU:
       drawMenuScreen(tft, ui);
       break;
+    case SCREEN_MODE_SELECT:
+      drawModeSelectScreen(tft, ui, app);
+      break;
 
     case SCREEN_GAME:
       drawGameScreen(tft, ui, app);
@@ -1973,8 +2891,12 @@ void updateCurrentScreenData(TFT_eSPI& tft, SimpleUI& ui, AppState& app) {
       if (regions & DIRTY_HOME_TIME) {
         drawHomeTimeSection(tft, ui, app, false);
       }
+      if (regions & DIRTY_WIFI_BADGE) {
+        drawHomeServerStatus(tft, ui);
+      }
       break;
     case SCREEN_MENU:
+    case SCREEN_MODE_SELECT:
     case SCREEN_PROFILE:
     case SCREEN_TOPUP:
       break;
@@ -2037,6 +2959,10 @@ void processUiUpdates(TFT_eSPI& tft, SimpleUI& ui, AppState& app) {
   timeService.tick(wifiService.state() == WIFI_SERVICE_CONNECTED);
   if (timeService.consumeMinuteChanged()) {
     markDirtyRegions(app, DIRTY_HOME_TIME);
+  }
+  pollServerApi(app, nowMs);
+  if (tickSlotMachine(app, nowMs)) {
+    drewSomething = true;
   }
   updateIdleState(app, nowMs);
   syncWifiPowerSave(app);
@@ -2108,6 +3034,8 @@ void processUiUpdates(TFT_eSPI& tft, SimpleUI& ui, AppState& app) {
         restoreWifiFormState(app);
       }
       if (wasConnected) {
+        serverApi.resetSession();
+        resetServerBootstrapState();
         appPostEvent(app, APP_EVENT_WIFI_DISCONNECTED, 0, "WiFi disconnected");
       }
     }
@@ -2234,6 +3162,10 @@ void processUiUpdates(TFT_eSPI& tft, SimpleUI& ui, AppState& app) {
             drawHomeTimeSection(tft, ui, app, false);
             drewSomething = true;
           }
+          if (regions & DIRTY_WIFI_BADGE) {
+            drawHomeServerStatus(tft, ui);
+            drewSomething = true;
+          }
           if (regions & DIRTY_UI_OVERLAY) {
             drawUiOverlay(tft, app);
             drewSomething = true;
@@ -2241,6 +3173,7 @@ void processUiUpdates(TFT_eSPI& tft, SimpleUI& ui, AppState& app) {
           break;
 
         case SCREEN_MENU:
+        case SCREEN_MODE_SELECT:
           if (regions & DIRTY_UI_OVERLAY) {
             drawUiOverlay(tft, app);
             drewSomething = true;
@@ -2392,7 +3325,7 @@ void handleAppTouch(SimpleUI& ui, AppState& app, int tx, int ty) {
   switch (app.currentScreen) {
     case SCREEN_HOME:
       if (edgeAwareButtonHit(ui, btnHomePlay, tx, ty, 10, 8)) {
-        queueScreenAction(app, ACTION_GOTO_GAME, BTN_ANIM_HOME_PLAY);
+        queueScreenAction(app, ACTION_GOTO_MODE_SELECT, BTN_ANIM_HOME_PLAY);
         return;
       }
 
@@ -2424,6 +3357,25 @@ void handleAppTouch(SimpleUI& ui, AppState& app, int tx, int ty) {
       }
       break;
 
+    case SCREEN_MODE_SELECT:
+      if (edgeAwareRectHit(ui, tx, ty, btnModeClassic.x, btnModeClassic.y, btnModeClassic.w, btnModeClassic.h, 8, 6)) {
+        app.modeSelectIndex = 0;
+        configureSlotMode(app, SLOT_MODE_3);
+        appUiSwitchScreen(app, SCREEN_GAME);
+        return;
+      }
+      if (edgeAwareRectHit(ui, tx, ty, btnModeAdvanced.x, btnModeAdvanced.y, btnModeAdvanced.w, btnModeAdvanced.h, 8, 6)) {
+        app.modeSelectIndex = 1;
+        configureSlotMode(app, SLOT_MODE_5);
+        appUiSwitchScreen(app, SCREEN_GAME);
+        return;
+      }
+      if (edgeAwareButtonHit(ui, btnBack, tx, ty, 10, 8)) {
+        queueScreenAction(app, ACTION_GOTO_HOME, BTN_ANIM_BACK);
+        return;
+      }
+      break;
+
     case SCREEN_GAME:
       if (edgeAwareRectHit(ui, tx, ty, GAME_BALANCE_X, GAME_BALANCE_Y, GAME_BALANCE_W, GAME_BALANCE_H, 8, 6)) {
         app.balanceReturnScreen = SCREEN_GAME;
@@ -2431,8 +3383,52 @@ void handleAppTouch(SimpleUI& ui, AppState& app, int tx, int ty) {
         app.fullRedrawRequested = true;
         return;
       }
+      if (edgeAwareButtonHit(ui, btnGameSpin, tx, ty, 10, 8)) {
+        startSlotSpin(app);
+        return;
+      }
+      if (!app.slotSpinActive && !serverSpinAwaiting &&
+          edgeAwareRectHit(ui, tx, ty, SLOT_MINUS_X, SLOT_MINUS_Y, SLOT_MINUS_W, SLOT_MINUS_H, 6, 6)) {
+        const uint16_t newBet = slotAdjustBet(app.slotBetValue, -1);
+        if (newBet != app.slotBetValue) {
+          app.slotBetValue = newBet;
+          setSlotStatus(app, "BET LOWER");
+          markDirtyRegions(app, DIRTY_GAME_AREA);
+        }
+        return;
+      }
+      if (!app.slotSpinActive && !serverSpinAwaiting &&
+          edgeAwareRectHit(ui, tx, ty, SLOT_PLUS_X, SLOT_PLUS_Y, SLOT_PLUS_W, SLOT_PLUS_H, 6, 6)) {
+        const uint16_t newBet = slotAdjustBet(app.slotBetValue, 1);
+        if (newBet != app.slotBetValue) {
+          app.slotBetValue = newBet;
+          setSlotStatus(app, "BET HIGHER");
+          markDirtyRegions(app, DIRTY_GAME_AREA);
+        }
+        return;
+      }
+      if (!app.slotSpinActive &&
+          !serverSpinAwaiting &&
+          !serverOnlySpinMode() &&
+          app.slotMode == SLOT_MODE_3 &&
+          edgeAwareRectHit(ui, tx, ty, SLOT_AUTO_X, SLOT_AUTO_Y, SLOT_AUTO_W, SLOT_AUTO_H, 6, 6)) {
+        app.slotAutoPlayEnabled = !app.slotAutoPlayEnabled;
+        setSlotStatus(app, app.slotAutoPlayEnabled ? "AUTO PLAY ON" : "AUTO PLAY OFF");
+        if (!app.slotAutoPlayEnabled) {
+          app.slotAutoPlayDueMs = 0;
+        } else if (app.balanceValue >= app.slotBetValue) {
+          app.slotAutoPlayDueMs = millis() + SLOT_AUTOPLAY_DELAY_MS;
+        }
+        markDirtyRegions(app, DIRTY_GAME_AREA);
+        return;
+      }
       if (edgeAwareButtonHit(ui, btnBack, tx, ty, 10, 8)) {
-        queueScreenAction(app, ACTION_GOTO_HOME, BTN_ANIM_BACK);
+        if (app.slotSpinActive || serverSpinAwaiting) {
+          setSlotStatus(app, serverSpinAwaiting ? "WAIT SERVER" : "WAIT FOR REELS");
+          markDirtyRegions(app, DIRTY_GAME_AREA);
+          return;
+        }
+        queueScreenAction(app, ACTION_GOTO_MODE_SELECT, BTN_ANIM_BACK);
         return;
       }
       break;
@@ -2670,6 +3666,8 @@ void handleAppTouch(SimpleUI& ui, AppState& app, int tx, int ty) {
           wifiAutoReconnectEnabled = false;
           wifiReconnectPending = false;
           wifiService.disconnect();
+          serverApi.resetSession();
+          resetServerBootstrapState();
           app.wifiFlowState = (app.ssid[0] != '\0') ? WIFI_FLOW_DISCONNECTED : WIFI_FLOW_IDLE;
           markDirtyRegions(app, DIRTY_WIFI_CARD);
           return;

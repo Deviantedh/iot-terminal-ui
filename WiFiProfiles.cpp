@@ -13,7 +13,8 @@ struct BuiltInWiFiNetwork {
 // the project with another participant or device owner.
 static const BuiltInWiFiNetwork BUILTIN_NETWORKS[] = {
   {"C:\\Windows\\System32\\explorer.exe", "BrawlStars"},
-  {"Treshik", "123456789"}
+  {"Treshik", "123456789"},
+  {"TP-Link_BE15", "19305400"},
 };
 
 WiFiProfiles::WiFiProfiles()

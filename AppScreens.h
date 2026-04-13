@@ -3,10 +3,12 @@
 
 #include <Arduino.h>
 #include "SimpleUI.h"
+#include "SlotGame.h"
 
 enum ScreenState {
   SCREEN_HOME,
   SCREEN_MENU,
+  SCREEN_MODE_SELECT,
   SCREEN_GAME,
   SCREEN_BALANCE,
   SCREEN_SETTINGS,
@@ -37,6 +39,7 @@ enum PendingAction {
   ACTION_NONE = 0,
   ACTION_GOTO_HOME,
   ACTION_GOTO_MENU,
+  ACTION_GOTO_MODE_SELECT,
   ACTION_GOTO_GAME,
   ACTION_GOTO_BALANCE,
   ACTION_GOTO_SETTINGS,
@@ -209,6 +212,43 @@ struct AppState {
   PowerMode powerMode;
   ScreenState balanceReturnScreen;
   bool testSongRequested;
+
+  // Slot machine runtime state for the GAME screen.
+  SlotMode slotMode;
+  uint8_t modeSelectIndex;
+  SlotSymbol reelSymbols[SLOT_MAX_REELS];
+  SlotSymbol reelTargetSymbols[SLOT_MAX_REELS];
+  SlotSymbol reelWindowSymbols[SLOT_MAX_ROWS][SLOT_MAX_REELS];
+  SlotSymbol reelTargetWindowSymbols[SLOT_MAX_ROWS][SLOT_MAX_REELS];
+  bool reelSpinning[SLOT_MAX_REELS];
+  unsigned long reelLastAdvanceMs[SLOT_MAX_REELS];
+  unsigned long reelStopAtMs[SLOT_MAX_REELS];
+  bool slotSpinActive;
+  bool slotAutoPlayEnabled;
+  unsigned long slotAutoPlayDueMs;
+  uint16_t slotBetValue;
+  int slotLastPayout;
+  unsigned long slotSpinStartedAtMs;
+  char slotStatusText[33];
+  uint8_t slotWinningLineCount;
+  uint8_t slotWinningLines[SLOT_MAX_PAYLINES];
+  uint8_t slotDisplayedWinningLine;
+  uint8_t slotRemainingWinningLineShows;
+  bool slotPaylineOverlayVisible;
+  unsigned long slotPaylineOverlayNextMs;
+  SlotSymbol lastDrawnReelSymbols[SLOT_MAX_REELS];
+  bool lastDrawnReelSpinning[SLOT_MAX_REELS];
+  SlotSymbol lastDrawnReelWindowSymbols[SLOT_MAX_ROWS][SLOT_MAX_REELS];
+  char lastDrawnSlotStatusText[33];
+  uint16_t lastDrawnSlotBetValue;
+  int lastDrawnSlotPayout;
+  bool lastDrawnSlotSpinActive;
+  bool lastDrawnSlotFooterSpinActive;
+  bool lastDrawnSlotAutoPlayEnabled;
+  SlotMode lastDrawnSlotMode;
+  uint8_t lastDrawnWinningLineCount;
+  uint8_t lastDrawnDisplayedWinningLine;
+  bool lastDrawnPaylineOverlayVisible;
 
   bool gameCacheValid;
 };

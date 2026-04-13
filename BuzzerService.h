@@ -23,6 +23,11 @@ public:
   void playError();
   void playWake();
   void playBootMelody();
+  void playSpinStart();
+  void playReelStop();
+  void playWinSmall();
+  void playJackpot();
+  void playLose();
   void playTestSong();
 
 private:

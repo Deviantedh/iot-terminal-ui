@@ -1,0 +1,392 @@
+openapi: 3.0.3
+info:
+  title: IoT Terminal Server API
+  version: 0.1.0
+  description: Contract for optional server-backed device auth, balance sync, slot spin results, and device events.
+servers:
+  - url: http://62.113.118.76:8080/api/v1
+paths:
+  /health:
+    get:
+      summary: Return backend health status for lightweight device UI checks.
+      operationId: getHealth
+      responses:
+        "200":
+          description: Backend is reachable.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/StatusResponse"
+  /devices/auth:
+    post:
+      summary: Authorize a device and create or refresh a session.
+      operationId: authorizeDevice
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/DeviceAuthRequest"
+      responses:
+        "200":
+          description: Device authorization result.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/DeviceAuthResponse"
+        default:
+          description: Server error response.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+  /devices/{deviceId}/balance:
+    get:
+      summary: Return current balance for a device or linked player.
+      operationId: getDeviceBalance
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: "#/components/parameters/DeviceIdPath"
+      responses:
+        "200":
+          description: Current balance.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/BalanceResponse"
+        default:
+          description: Server error response.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+  /games/slot/3-reels/spin:
+    post:
+      summary: Return a complete deterministic spin result for classic 3-reels mode.
+      operationId: spinSlot3Reels
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/SpinRequest"
+      responses:
+        "200":
+          description: Spin result for one row and three reels.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Spin3ReelsResponse"
+        default:
+          description: Server error response.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+  /games/slot/5-reels/spin:
+    post:
+      summary: Return a complete deterministic spin result for 5-reels and 3-row mode.
+      operationId: spinSlot5Reels
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/SpinRequest"
+      responses:
+        "200":
+          description: Spin result for three rows and five reels.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Spin5ReelsResponse"
+        default:
+          description: Server error response.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+  /devices/events:
+    post:
+      summary: Accept device telemetry, heartbeat, or gameplay events.
+      operationId: postDeviceEvent
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/DeviceEventRequest"
+      responses:
+        "202":
+          description: Event accepted.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/StatusResponse"
+        "200":
+          description: Event accepted.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/StatusResponse"
+        default:
+          description: Server error response.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+components:
+  securitySchemes:
+    bearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: opaque-session-token
+  parameters:
+    DeviceIdPath:
+      name: deviceId
+      in: path
+      required: true
+      schema:
+        type: string
+        minLength: 1
+        maxLength: 24
+      example: esp8266-12AB34
+  schemas:
+    Status:
+      type: string
+      enum:
+        - ok
+        - success
+        - error
+    StatusResponse:
+      type: object
+      required:
+        - status
+      properties:
+        status:
+          $ref: "#/components/schemas/Status"
+        message:
+          type: string
+          maxLength: 96
+    ErrorResponse:
+      type: object
+      required:
+        - status
+        - error
+      properties:
+        status:
+          type: string
+          enum:
+            - error
+        error:
+          type: string
+          maxLength: 48
+        message:
+          type: string
+          maxLength: 96
+    DeviceAuthRequest:
+      type: object
+      required:
+        - deviceId
+      properties:
+        deviceId:
+          type: string
+          minLength: 1
+          maxLength: 24
+          example: esp8266-12AB34
+        firmwareVersion:
+          type: string
+          maxLength: 32
+          example: iot_terminal_ui
+        capabilities:
+          type: array
+          items:
+            type: string
+            enum:
+              - slot3
+              - slot5
+          example:
+            - slot3
+            - slot5
+    DeviceAuthResponse:
+      type: object
+      required:
+        - status
+        - authorized
+      properties:
+        status:
+          $ref: "#/components/schemas/Status"
+        authorized:
+          type: boolean
+        token:
+          type: string
+          maxLength: 64
+          description: Opaque session token. Return when authorized is true.
+        userName:
+          type: string
+          maxLength: 32
+          description: Display name shown on the device home screen after one-time authorization.
+        message:
+          type: string
+          maxLength: 96
+    BalanceResponse:
+      type: object
+      required:
+        - status
+        - balance
+      properties:
+        status:
+          $ref: "#/components/schemas/Status"
+        balance:
+          type: integer
+          minimum: 0
+          example: 1000
+        currency:
+          type: string
+          maxLength: 8
+          example: USD
+        message:
+          type: string
+          maxLength: 96
+    SpinRequest:
+      type: object
+      required:
+        - deviceId
+        - mode
+        - bet
+      properties:
+        deviceId:
+          type: string
+          minLength: 1
+          maxLength: 24
+          example: esp8266-12AB34
+        sessionToken:
+          type: string
+          maxLength: 64
+          description: Optional copy of the bearer token for constrained clients.
+        mode:
+          type: string
+          enum:
+            - 3-reels
+            - 5-reels
+        bet:
+          type: integer
+          minimum: 0
+          example: 25
+        clientBalance:
+          type: integer
+          minimum: 0
+          description: Optional device-side balance snapshot used by the mock backend to stay in sync during fast repeated spins.
+    SlotSymbolId:
+      type: integer
+      minimum: 0
+      maximum: 5
+      description: 0=CHERRY, 1=LEMON, 2=BELL, 3=STAR, 4=DIAMOND, 5=SEVEN.
+    Spin3ReelsResponse:
+      type: object
+      required:
+        - status
+        - mode
+        - symbols
+      properties:
+        status:
+          $ref: "#/components/schemas/Status"
+        mode:
+          type: string
+          enum:
+            - 3-reels
+        symbols:
+          type: array
+          minItems: 1
+          maxItems: 1
+          items:
+            type: array
+            minItems: 3
+            maxItems: 3
+            items:
+              $ref: "#/components/schemas/SlotSymbolId"
+          example:
+            - [0, 5, 2]
+        payoutMultiplier:
+          type: integer
+          minimum: 0
+          description: Optional server-calculated hint. Firmware can still calculate payout locally.
+        balance:
+          type: integer
+          minimum: 0
+          description: Optional current server-side balance snapshot.
+        message:
+          type: string
+          maxLength: 96
+    Spin5ReelsResponse:
+      type: object
+      required:
+        - status
+        - mode
+        - symbols
+      properties:
+        status:
+          $ref: "#/components/schemas/Status"
+        mode:
+          type: string
+          enum:
+            - 5-reels
+        symbols:
+          type: array
+          minItems: 3
+          maxItems: 3
+          description: Three rows, each with five reel symbol ids, in display row order.
+          items:
+            type: array
+            minItems: 5
+            maxItems: 5
+            items:
+              $ref: "#/components/schemas/SlotSymbolId"
+          example:
+            - [0, 1, 2, 3, 4]
+            - [5, 5, 5, 1, 0]
+            - [2, 3, 4, 0, 1]
+        payoutMultiplier:
+          type: integer
+          minimum: 0
+          description: Optional server-calculated hint. Firmware can still calculate payout locally.
+        balance:
+          type: integer
+          minimum: 0
+          description: Optional current server-side balance snapshot.
+        message:
+          type: string
+          maxLength: 96
+    DeviceEventRequest:
+      type: object
+      required:
+        - deviceId
+        - eventType
+      properties:
+        deviceId:
+          type: string
+          minLength: 1
+          maxLength: 24
+          example: esp8266-12AB34
+        sessionToken:
+          type: string
+          maxLength: 64
+        eventType:
+          type: string
+          maxLength: 24
+          example: spin_win
+        value:
+          type: integer
+          format: int32
+          description: Event value. For mock spin events this is the device balance after local payout calculation.
+          example: 1250
+        message:
+          type: string
+          maxLength: 64
