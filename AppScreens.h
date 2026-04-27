@@ -153,6 +153,7 @@ struct AppState {
   bool keyboardActive;
   bool keyboardNeedsInit;
   uint8_t networkPage;
+  uint8_t accountPage;
 
   unsigned long lastTouchTime;
   unsigned long lastInteractionMs;

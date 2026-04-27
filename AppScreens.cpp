@@ -213,6 +213,28 @@ static const int HOME_SERVER_STATUS_X = 76;
 static const int HOME_SERVER_STATUS_Y = 136;
 static const int HOME_SERVER_STATUS_W = 168;
 static const int HOME_SERVER_STATUS_H = 14;
+static const int PROFILE_SUBTITLE_Y = 52;
+static const int PROFILE_CARD_W = 124;
+static const int PROFILE_CARD_H = 56;
+static const int PROFILE_CARD_GAP_X = 16;
+static const int PROFILE_CARD_GAP_Y = 12;
+static const int PROFILE_CARD_COL1_X = 28;
+static const int PROFILE_CARD_COL2_X = PROFILE_CARD_COL1_X + PROFILE_CARD_W + PROFILE_CARD_GAP_X;
+static const int PROFILE_CARD_ROW1_Y = 70;
+static const int PROFILE_CARD_ROW2_Y = PROFILE_CARD_ROW1_Y + PROFILE_CARD_H + PROFILE_CARD_GAP_Y;
+static const int PROFILE_PAGE_SIZE = 4;
+static const int PROFILE_PREV_X = 28;
+static const int PROFILE_PREV_Y = 204;
+static const int PROFILE_PREV_W = 74;
+static const int PROFILE_PREV_H = 28;
+static const int PROFILE_REFRESH_X = 114;
+static const int PROFILE_REFRESH_Y = 204;
+static const int PROFILE_REFRESH_W = 92;
+static const int PROFILE_REFRESH_H = 28;
+static const int PROFILE_NEXT_X = 218;
+static const int PROFILE_NEXT_Y = 204;
+static const int PROFILE_NEXT_W = 74;
+static const int PROFILE_NEXT_H = 28;
 
 static const int MENU_BACK_X = 12;
 static const int MENU_BACK_Y = 4;
@@ -267,6 +289,7 @@ static const int SLOT_AUTO_X = 164;
 static const int SLOT_AUTO_Y = 174;
 static const int SLOT_AUTO_W = 44;
 static const int SLOT_AUTO_H = 26;
+static const int SLOT_CONTROL_PAD_Y = 7;
 static const int SLOT_SPIN_X = 216;
 static const int SLOT_SPIN_Y = 168;
 static const int SLOT_SPIN_W = 62;
@@ -281,13 +304,16 @@ static const int SLOT_ICON_SIZE = 32;
 // ---------------------------
 static UIButton btnHomePlay = {HOME_PLAY_X, HOME_PLAY_Y, HOME_PLAY_W, HOME_PLAY_H, UI_ACCENT, UI_ACCENT_PRESSED, "PLAY"};
 static UIButton btnHomeMenu = {HOME_MENU_X, HOME_MENU_Y, HOME_MENU_W, HOME_MENU_H, UI_SECONDARY, UI_SECONDARY_PRESSED, "MENU"};
-static UIButton btnMenuProfile = {42,  58, 236, 42, UI_PANEL_ALT, UI_SECONDARY_PRESSED, "PROFILE"};
+static UIButton btnMenuProfile = {42,  58, 236, 42, UI_PANEL_ALT, UI_SECONDARY_PRESSED, "PLAYER"};
 static UIButton btnMenuTopUp   = {42, 112, 236, 42, UI_PANEL_ALT, UI_SECONDARY_PRESSED, "TOP UP"};
 static UIButton btnMenuSettings = {42, 166, 236, 42, UI_PANEL_ALT, UI_SECONDARY_PRESSED, "SETTINGS"};
 static UIButton btnMenuHome = {MENU_BACK_X, MENU_BACK_Y, MENU_BACK_W, MENU_BACK_H, UI_NEUTRAL, UI_NEUTRAL_PRESSED, "HOME"};
 static UIButton btnBack     = {BACK_X, BACK_Y, BACK_W, BACK_H, UI_NEUTRAL, UI_NEUTRAL_PRESSED, "BACK"};
 static UIButton btnModeClassic = {MODE_CARD_X, MODE_CARD_CLASSIC_Y, MODE_CARD_W, MODE_CARD_H, UI_PANEL_ALT, UI_SECONDARY_PRESSED, "CLASSIC"};
 static UIButton btnModeAdvanced = {MODE_CARD_X, MODE_CARD_ADVANCED_Y, MODE_CARD_W, MODE_CARD_H, UI_PANEL_ALT, UI_SECONDARY_PRESSED, "ADVANCED"};
+static UIButton btnProfilePrev = {PROFILE_PREV_X, PROFILE_PREV_Y, PROFILE_PREV_W, PROFILE_PREV_H, UI_NEUTRAL, UI_NEUTRAL_PRESSED, "PREV"};
+static UIButton btnProfileRefresh = {PROFILE_REFRESH_X, PROFILE_REFRESH_Y, PROFILE_REFRESH_W, PROFILE_REFRESH_H, UI_PANEL_ALT, UI_SECONDARY_PRESSED, "REFRESH"};
+static UIButton btnProfileNext = {PROFILE_NEXT_X, PROFILE_NEXT_Y, PROFILE_NEXT_W, PROFILE_NEXT_H, UI_NEUTRAL, UI_NEUTRAL_PRESSED, "NEXT"};
 static UIButton btnSettingsMainBack = {SETTINGS_MAIN_BACK_X, SETTINGS_MAIN_BACK_Y, SETTINGS_MAIN_BACK_W, SETTINGS_MAIN_BACK_H, UI_NEUTRAL, UI_NEUTRAL_PRESSED, "BACK"};
 static UIButton btnSettingsTouchDiag = {SETTINGS_MAIN_TOUCH_X, SETTINGS_MAIN_TOUCH_Y, SETTINGS_MAIN_TOUCH_W, SETTINGS_MAIN_TOUCH_H, UI_PANEL_ALT, UI_SECONDARY_PRESSED, "TOUCH DIAGNOSTICS"};
 static UIButton btnSettingsTests = {SETTINGS_MAIN_TESTS_X, SETTINGS_MAIN_TESTS_Y, SETTINGS_MAIN_TESTS_W, SETTINGS_MAIN_TESTS_H, UI_PANEL_ALT, UI_SECONDARY_PRESSED, "TESTS"};
@@ -327,6 +353,10 @@ static bool lastDrawnServerSpinAwaiting = false;
 static bool lastObservedServerHealthKnown = false;
 static bool lastObservedServerHealthOk = false;
 static bool lastObservedServerAuthorized = false;
+static bool lastObservedServerBusy = false;
+static bool lastObservedAccountsReady = false;
+static uint8_t lastObservedAccountCount = 0;
+static char lastObservedSelectedAccountId[25] = "";
 
 static void fitTextWithEllipsis(TFT_eSPI& tft, const char* src, char* out, size_t outSize, int maxWidthPx);
 static void restoreWifiFormState(AppState& app);
@@ -351,6 +381,9 @@ static bool serverOnlySpinMode();
 static void requestServerSlotSpin(AppState& app);
 static void beginSlotSpinWithResult(AppState& app, const SlotSpinResult& requestedResult);
 static void pollServerApi(AppState& app, unsigned long nowMs);
+static void requestPlayerAccounts(AppState& app, bool forceRefresh);
+static void beginSelectedAccountAuth(AppState& app, const ServerApiAccountInfo& account);
+static void drawProfileScreen(TFT_eSPI& tft, SimpleUI& ui, AppState& app);
 
 static void configureWifiPrimaryButton(const AppState& app) {
   if (app.wifiFlowState == WIFI_FLOW_CONNECTED) {
@@ -451,6 +484,13 @@ static bool edgeAwareRectHit(SimpleUI& ui, int tx, int ty,
 
 static bool edgeAwareButtonHit(SimpleUI& ui, const UIButton& btn, int tx, int ty, int padX, int padY) {
   return edgeAwareRectHit(ui, tx, ty, btn.x, btn.y, btn.w, btn.h, padX, padY);
+}
+
+static bool slotControlHit(SimpleUI& ui, int tx, int ty,
+                           int leftLimit, int y, int rightLimit, int h) {
+  const int top = y - SLOT_CONTROL_PAD_Y;
+  const int height = h + SLOT_CONTROL_PAD_Y * 2;
+  return ui.inRect(tx, ty, leftLimit, top, rightLimit - leftLimit, height);
 }
 
 static bool edgeAwareCardHit(SimpleUI& ui, int tx, int ty, int x, int y, int w, int h) {
@@ -1051,6 +1091,10 @@ static void resetServerBootstrapState() {
   lastObservedServerHealthKnown = false;
   lastObservedServerHealthOk = false;
   lastObservedServerAuthorized = false;
+  lastObservedServerBusy = false;
+  lastObservedAccountsReady = false;
+  lastObservedAccountCount = 0;
+  lastObservedSelectedAccountId[0] = '\0';
 }
 
 static bool canStartServerRequest(const AppState& app) {
@@ -1062,6 +1106,43 @@ static bool canStartServerRequest(const AppState& app) {
 
 static bool serverOnlySpinMode() {
   return SERVER_API_NETWORK_ENABLED && SERVER_API_REQUIRE_SERVER_FOR_SPIN;
+}
+
+static void requestPlayerAccounts(AppState& app, bool forceRefresh) {
+  initServerApiIfNeeded();
+  if (!forceRefresh && serverApi.healthOk() && serverApi.accountsReady()) {
+    if (app.currentScreen == SCREEN_PROFILE) {
+      app.fullRedrawRequested = true;
+    }
+    return;
+  }
+  serverBootstrapDone = false;
+  serverBootstrapNextAttemptMs = 0;
+  if (forceRefresh) {
+    lastObservedServerAuthorized = serverApi.authorized();
+  }
+  if (!serverApi.healthKnown() || !serverApi.healthOk()) {
+    serverApi.requestHealth();
+  } else {
+    serverApi.requestAccounts();
+  }
+  if (app.currentScreen == SCREEN_PROFILE) {
+    app.fullRedrawRequested = true;
+  }
+}
+
+static void beginSelectedAccountAuth(AppState& app, const ServerApiAccountInfo& account) {
+  serverApi.selectAccount(account.accountId, account.displayName);
+  serverBootstrapDone = false;
+  serverBootstrapNextAttemptMs = 0;
+  if (account.balanceKnown) {
+    app.balanceValue = account.balance;
+    markDirtyRegions(app, DIRTY_BALANCE_CARD);
+  }
+  appUiShowMessage(app, "Signing in...", UI_INFO, 1200);
+  if (app.currentScreen == SCREEN_PROFILE) {
+    app.fullRedrawRequested = true;
+  }
 }
 
 static void requestServerSlotSpin(AppState& app) {
@@ -1111,25 +1192,31 @@ static void pollServerApi(AppState& app, unsigned long nowMs) {
     markDirtyRegions(app, DIRTY_GAME_AREA);
   }
 
-  if (!serverSpinAwaiting && app.currentScreen != SCREEN_HOME) {
+  if (!serverSpinAwaiting &&
+      app.currentScreen != SCREEN_HOME &&
+      app.currentScreen != SCREEN_PROFILE) {
     serverApi.cancelBackgroundRequests();
   }
 
   if (wifiConnected &&
       timeService.isTimeValid() &&
       !serverSpinAwaiting &&
-      app.currentScreen == SCREEN_HOME &&
+      (app.currentScreen == SCREEN_HOME || app.currentScreen == SCREEN_PROFILE) &&
       !serverApi.busy() &&
       (long)(nowMs - serverBootstrapNextAttemptMs) >= 0) {
     if (!serverApi.healthOk()) {
       if (serverApi.requestHealth()) {
         serverBootstrapNextAttemptMs = nowMs + 5000;
       }
-    } else if (!serverApi.authorized()) {
+    } else if (!serverApi.accountsReady()) {
+      if (serverApi.requestAccounts()) {
+        serverBootstrapNextAttemptMs = nowMs + 5000;
+      }
+    } else if (serverApi.hasSelectedAccount() && !serverApi.authorized()) {
       if (serverApi.requestAuth()) {
         serverBootstrapNextAttemptMs = nowMs + 5000;
       }
-    } else if (!serverBootstrapDone) {
+    } else if (serverApi.hasSelectedAccount() && !serverBootstrapDone) {
       if (serverApi.requestBalance()) {
         serverBootstrapNextAttemptMs = nowMs + 5000;
       }
@@ -1138,7 +1225,7 @@ static void pollServerApi(AppState& app, unsigned long nowMs) {
 
   const bool allowServerRequestStart =
     canStartServerRequest(app) &&
-    (serverSpinAwaiting || app.currentScreen == SCREEN_HOME);
+    (serverSpinAwaiting || app.currentScreen == SCREEN_HOME || app.currentScreen == SCREEN_PROFILE);
   serverApi.tick(wifiConnected, nowMs, allowServerRequestStart);
 
   SlotSpinResult serverResult;
@@ -1172,7 +1259,7 @@ static void pollServerApi(AppState& app, unsigned long nowMs) {
 
   if (consumedServerBalance &&
       serverApi.authorized() &&
-      app.currentScreen == SCREEN_HOME &&
+      (app.currentScreen == SCREEN_HOME || app.currentScreen == SCREEN_PROFILE) &&
       !serverBootstrapDone) {
     serverBootstrapDone = true;
     markDirtyRegions(app, DIRTY_WIFI_BADGE | DIRTY_BALANCE_CARD);
@@ -1189,6 +1276,22 @@ static void pollServerApi(AppState& app, unsigned long nowMs) {
     lastObservedServerAuthorized = serverApi.authorized();
     markDirtyRegions(app, DIRTY_WIFI_BADGE);
   }
+
+  const bool profileStateChanged =
+    serverApi.busy() != lastObservedServerBusy ||
+    serverApi.accountsReady() != lastObservedAccountsReady ||
+    serverApi.accountCount() != lastObservedAccountCount ||
+    strcmp(serverApi.selectedAccountId(), lastObservedSelectedAccountId) != 0;
+  if (profileStateChanged) {
+    lastObservedServerBusy = serverApi.busy();
+    lastObservedAccountsReady = serverApi.accountsReady();
+    lastObservedAccountCount = serverApi.accountCount();
+    strncpy(lastObservedSelectedAccountId, serverApi.selectedAccountId(), sizeof(lastObservedSelectedAccountId) - 1);
+    lastObservedSelectedAccountId[sizeof(lastObservedSelectedAccountId) - 1] = '\0';
+    if (app.currentScreen == SCREEN_PROFILE) {
+      app.fullRedrawRequested = true;
+    }
+  }
 }
 
 static void resetSlotPresentation(AppState& app) {
@@ -1204,7 +1307,7 @@ static void configureSlotMode(AppState& app, SlotMode mode) {
   app.slotSpinActive = false;
   serverSpinAwaiting = false;
   app.slotAutoPlayDueMs = 0;
-  if (mode != SLOT_MODE_3 || serverOnlySpinMode()) {
+  if (mode != SLOT_MODE_3) {
     app.slotAutoPlayEnabled = false;
   }
   resetSlotPresentation(app);
@@ -1302,8 +1405,7 @@ static void finishSlotSpin(AppState& app) {
     buzzer.playLose();
   }
 
-  if (!serverOnlySpinMode() &&
-      app.slotMode == SLOT_MODE_3 &&
+  if (app.slotMode == SLOT_MODE_3 &&
       app.slotAutoPlayEnabled &&
       app.balanceValue >= app.slotBetValue) {
     app.slotAutoPlayDueMs = millis() + SLOT_AUTOPLAY_DELAY_MS;
@@ -1860,6 +1962,7 @@ void initAppState(AppState& app) {
   app.keyboardActive = false;
   app.keyboardNeedsInit = false;
   app.networkPage = 0;
+  app.accountPage = 0;
 
   app.lastTouchTime = 0;
   app.lastInteractionMs = millis();
@@ -2560,6 +2663,14 @@ static void drawSlotBetBox(TFT_eSPI& tft, int x, int y, int w, int h, const char
   tft.setTextDatum(TL_DATUM);
 }
 
+static void clearSlotControlStrip(TFT_eSPI& tft) {
+  const int x = SLOT_MINUS_X - 4;
+  const int y = SLOT_SPIN_Y - 4;
+  const int w = SLOT_SPIN_X + SLOT_SPIN_W - x + 4;
+  const int h = SLOT_SPIN_Y + SLOT_SPIN_H - y + 4;
+  tft.fillRect(x, y, w, h, UI_PANEL);
+}
+
 static void updateSlotBetControls(TFT_eSPI& tft, AppState& app, bool force) {
   if (!force &&
       app.lastDrawnSlotBetValue == app.slotBetValue &&
@@ -2567,10 +2678,7 @@ static void updateSlotBetControls(TFT_eSPI& tft, AppState& app, bool force) {
     return;
   }
 
-  const int controlsWidth = (app.slotMode == SLOT_MODE_3)
-    ? (SLOT_AUTO_X + SLOT_AUTO_W - SLOT_MINUS_X)
-    : (SLOT_PLUS_X + SLOT_PLUS_W - SLOT_MINUS_X);
-  tft.fillRect(SLOT_MINUS_X, SLOT_MINUS_Y, controlsWidth, SLOT_MINUS_H, UI_PANEL);
+  clearSlotControlStrip(tft);
   drawSlotBetBox(tft, SLOT_MINUS_X, SLOT_MINUS_Y, SLOT_MINUS_W, SLOT_MINUS_H, "-");
 
   char betText[16];
@@ -2579,10 +2687,14 @@ static void updateSlotBetControls(TFT_eSPI& tft, AppState& app, bool force) {
   drawSlotBetBox(tft, SLOT_PLUS_X, SLOT_PLUS_Y, SLOT_PLUS_W, SLOT_PLUS_H, "+");
   app.lastDrawnSlotBetValue = app.slotBetValue;
   app.lastDrawnSlotMode = app.slotMode;
+  app.lastDrawnSlotAutoPlayEnabled = !app.slotAutoPlayEnabled;
+  app.lastDrawnSlotSpinActive = !app.slotSpinActive;
+  lastDrawnServerSpinAwaiting = !serverSpinAwaiting;
 }
 
-static void updateSlotAutoButton(SimpleUI& ui, AppState& app, bool force) {
+static void updateSlotAutoButton(TFT_eSPI& tft, SimpleUI& ui, AppState& app, bool force) {
   if (app.slotMode != SLOT_MODE_3) {
+    tft.fillRect(SLOT_AUTO_X, SLOT_AUTO_Y, SLOT_AUTO_W, SLOT_AUTO_H, UI_PANEL);
     return;
   }
 
@@ -2644,7 +2756,7 @@ static void updateGameArea(TFT_eSPI& tft, SimpleUI& ui, AppState& app, bool forc
   updateSlotStatusArea(tft, ui, app, force || !app.gameCacheValid);
   updateSlotReels(tft, app, force || !app.gameCacheValid);
   updateSlotBetControls(tft, app, force || !app.gameCacheValid);
-  updateSlotAutoButton(ui, app, force || !app.gameCacheValid);
+  updateSlotAutoButton(tft, ui, app, force || !app.gameCacheValid);
   updateSlotFooter(tft, ui, app, force || !app.gameCacheValid);
   updateSlotSpinButton(ui, app, force || !app.gameCacheValid);
   app.gameCacheValid = true;
@@ -2653,14 +2765,25 @@ static void updateGameArea(TFT_eSPI& tft, SimpleUI& ui, AppState& app, bool forc
 static void drawHomeServerStatus(TFT_eSPI& tft, SimpleUI& ui) {
   const bool known = serverApi.healthKnown();
   const bool ok = serverApi.healthOk();
+  const char* subtitle = serverApi.authorized()
+    ? (serverBootstrapDone ? "ready to play" : "syncing balance...")
+    : "pick a player to continue";
   char text[32];
   if (serverApi.authorized()) {
     snprintf(text, sizeof(text), "%s", serverApi.userName());
+  } else if (serverApi.hasSelectedAccount()) {
+    snprintf(text, sizeof(text), "%s", serverApi.selectedAccountName());
+  } else if (serverApi.accountsReady()) {
+    snprintf(text, sizeof(text), "%s", "CHOOSE PLAYER");
   } else {
     snprintf(text, sizeof(text), "%s", known ? (ok ? "SERVER OK" : "SERVER ERROR") : "SERVER ...");
   }
-  const uint16_t color = known ? (ok ? UI_SUCCESS : UI_ERROR) : UI_WARNING;
+  const uint16_t color = serverApi.authorized()
+    ? UI_SUCCESS
+    : (serverApi.hasSelectedAccount() ? UI_INFO : (known ? (ok ? UI_ACCENT : UI_ERROR) : UI_WARNING));
 
+  tft.fillRect(HOME_BG_X + 16, 114, HOME_BG_W - 32, 18, UI_PANEL);
+  ui.drawCenteredText(subtitle, SCREEN_W / 2, 122, UI_TEXT_MUTED, UI_PANEL, 1);
   tft.fillRect(HOME_SERVER_STATUS_X, HOME_SERVER_STATUS_Y,
                HOME_SERVER_STATUS_W, HOME_SERVER_STATUS_H, UI_PANEL);
   tft.drawRect(HOME_SERVER_STATUS_X, HOME_SERVER_STATUS_Y,
@@ -2680,7 +2803,6 @@ static void drawHomeScreen(TFT_eSPI& tft, SimpleUI& ui) {
   tft.drawRect(HOME_BG_X + 5, HOME_BG_Y + 5, HOME_BG_W - 10, HOME_BG_H - 10, UI_BORDER_SOFT);
   tft.drawFastHLine(HOME_BG_X + 16, HOME_BG_Y + 28, HOME_BG_W - 32, UI_BORDER_SOFT);
   ui.drawCenteredText("HOME", SCREEN_W / 2, 34, UI_TEXT_MUTED, UI_PANEL, 1);
-  ui.drawCenteredText("device home screen", SCREEN_W / 2, 122, UI_TEXT_MUTED, UI_PANEL, 1);
   drawHomeServerStatus(tft, ui);
   ui.drawButton(btnHomePlay);
   ui.drawButton(btnHomeMenu);
@@ -2763,6 +2885,105 @@ static void drawPlaceholderScreen(TFT_eSPI& tft, SimpleUI& ui, const char* title
   yield();
   ui.drawButton(btnBack);
   yield();
+}
+
+static void drawProfileAccountCard(TFT_eSPI& tft, SimpleUI& ui, const ServerApiAccountInfo& account,
+                                   int x, int y, bool selected, bool active, bool waiting) {
+  const uint16_t fill = active ? UI_SUCCESS : (selected ? UI_ACCENT : UI_PANEL_ALT);
+  const uint16_t border = active ? UI_GOLD : (selected ? UI_INFO : UI_BORDER);
+  char name[24];
+  fitTextWithEllipsis(tft, account.displayName, name, sizeof(name), PROFILE_CARD_W - 20);
+
+  tft.fillRect(x, y, PROFILE_CARD_W, PROFILE_CARD_H, fill);
+  tft.drawRect(x, y, PROFILE_CARD_W, PROFILE_CARD_H, border);
+  tft.drawRect(x + 2, y + 2, PROFILE_CARD_W - 4, PROFILE_CARD_H - 4, UI_BORDER_SOFT);
+  ui.drawCenteredText(name, x + PROFILE_CARD_W / 2, y + 17, UI_TEXT, fill, 2);
+
+  if (active) {
+    ui.drawCenteredText("active", x + PROFILE_CARD_W / 2, y + 39, UI_TEXT_MUTED, fill, 1);
+  } else if (selected && waiting) {
+    ui.drawCenteredText("signing in", x + PROFILE_CARD_W / 2, y + 39, UI_TEXT_MUTED, fill, 1);
+  } else if (account.balanceKnown) {
+    char balanceText[20];
+    snprintf(balanceText, sizeof(balanceText), "$ %d", account.balance);
+    ui.drawCenteredText(balanceText, x + PROFILE_CARD_W / 2, y + 39, UI_TEXT_MUTED, fill, 1);
+  } else {
+    ui.drawCenteredText("tap to sign in", x + PROFILE_CARD_W / 2, y + 39, UI_TEXT_MUTED, fill, 1);
+  }
+}
+
+static void drawProfileScreen(TFT_eSPI& tft, SimpleUI& ui, AppState& app) {
+  const uint8_t totalAccounts = serverApi.accountCount();
+  const uint8_t pageCount = (uint8_t)((totalAccounts + PROFILE_PAGE_SIZE - 1) / PROFILE_PAGE_SIZE);
+  if (pageCount > 0 && app.accountPage >= pageCount) {
+    app.accountPage = 0;
+  }
+  const bool canPrev = app.accountPage > 0;
+  const bool canNext = totalAccounts > PROFILE_PAGE_SIZE && (uint8_t)(app.accountPage + 1) < pageCount;
+  btnProfilePrev.color = canPrev ? UI_NEUTRAL : UI_PANEL_ALT;
+  btnProfilePrev.pressedColor = canPrev ? UI_NEUTRAL_PRESSED : UI_PANEL_ALT;
+  btnProfileNext.color = canNext ? UI_NEUTRAL : UI_PANEL_ALT;
+  btnProfileNext.pressedColor = canNext ? UI_NEUTRAL_PRESSED : UI_PANEL_ALT;
+
+  drawScreenBase(tft);
+  ui.drawHeaderBar("PLAYER", UI_TEXT);
+  ui.drawCenteredText("Who's playing today?", SCREEN_W / 2, PROFILE_SUBTITLE_Y, UI_TEXT, UI_BG, 2);
+  ui.drawButton(btnBack);
+  ui.drawButton(btnProfilePrev);
+  ui.drawButton(btnProfileRefresh);
+  ui.drawButton(btnProfileNext);
+
+  if (app.wifiFlowState != WIFI_FLOW_CONNECTED) {
+    drawCard(ui, 28, 86, 264, 70);
+    ui.drawCenteredText("Connect Wi-Fi first", SCREEN_W / 2, 108, UI_TEXT, UI_PANEL, 2);
+    ui.drawCenteredText("Account list needs the server", SCREEN_W / 2, 134, UI_TEXT_MUTED, UI_PANEL, 1);
+    return;
+  }
+
+  if (!timeService.isTimeValid() || (!serverApi.healthKnown() && !serverApi.accountsReady())) {
+    drawCard(ui, 28, 86, 264, 70);
+    ui.drawCenteredText("Checking server...", SCREEN_W / 2, 108, UI_TEXT, UI_PANEL, 2);
+    ui.drawCenteredText("Players will appear here", SCREEN_W / 2, 134, UI_TEXT_MUTED, UI_PANEL, 1);
+    return;
+  }
+
+  if (serverApi.healthKnown() && !serverApi.healthOk()) {
+    drawCard(ui, 28, 86, 264, 70);
+    ui.drawCenteredText("Server unavailable", SCREEN_W / 2, 108, UI_ERROR, UI_PANEL, 2);
+    ui.drawCenteredText("Try refresh or check backend", SCREEN_W / 2, 134, UI_TEXT_MUTED, UI_PANEL, 1);
+    return;
+  }
+
+  if (!serverApi.accountsReady() || serverApi.accountCount() == 0) {
+    drawCard(ui, 28, 86, 264, 70);
+    ui.drawCenteredText(serverApi.busy() ? "Loading players..." : "No players found",
+                        SCREEN_W / 2, 108, UI_TEXT, UI_PANEL, 2);
+    ui.drawCenteredText(serverApi.busy() ? "Please wait a moment" : "Backend returned an empty list",
+                        SCREEN_W / 2, 134, UI_TEXT_MUTED, UI_PANEL, 1);
+    return;
+  }
+
+  char pageLabel[16];
+  snprintf(pageLabel, sizeof(pageLabel), "%u / %u", (unsigned)(app.accountPage + 1), (unsigned)pageCount);
+  ui.drawCenteredText(pageLabel, SCREEN_W / 2, 188, UI_TEXT_MUTED, UI_BG, 1);
+
+  const uint8_t startIndex = (uint8_t)(app.accountPage * PROFILE_PAGE_SIZE);
+  for (uint8_t offset = 0; offset < PROFILE_PAGE_SIZE; offset++) {
+    const uint8_t index = (uint8_t)(startIndex + offset);
+    if (index >= serverApi.accountCount()) {
+      break;
+    }
+    const ServerApiAccountInfo* account = serverApi.accountAt(index);
+    if (account == nullptr) {
+      continue;
+    }
+    const int x = (offset % 2 == 0) ? PROFILE_CARD_COL1_X : PROFILE_CARD_COL2_X;
+    const int y = (offset < 2) ? PROFILE_CARD_ROW1_Y : PROFILE_CARD_ROW2_Y;
+    const bool selected = strcmp(serverApi.selectedAccountId(), account->accountId) == 0;
+    drawProfileAccountCard(tft, ui, *account, x, y, selected,
+                           selected && serverApi.authorized(),
+                           selected && serverApi.busy());
+  }
 }
 
 static void drawSettingsScreen(TFT_eSPI& tft, SimpleUI& ui, AppState& app) {
@@ -2873,7 +3094,7 @@ void drawCurrentScreen(TFT_eSPI& tft, SimpleUI& ui, AppState& app) {
       drawTestsScreen(tft, ui);
       break;
     case SCREEN_PROFILE:
-      drawPlaceholderScreen(tft, ui, "PROFILE", "Profile area", "account details coming later", UI_SECONDARY);
+      drawProfileScreen(tft, ui, app);
       break;
     case SCREEN_TOPUP:
       drawPlaceholderScreen(tft, ui, "TOP UP", "Top up area", "payment flow coming later", UI_ACCENT);
@@ -3215,6 +3436,11 @@ void processUiUpdates(TFT_eSPI& tft, SimpleUI& ui, AppState& app) {
           break;
 
         case SCREEN_PROFILE:
+          if (regions & DIRTY_UI_OVERLAY) {
+            drawUiOverlay(tft, app);
+            drewSomething = true;
+          }
+          break;
         case SCREEN_TOPUP:
           if (regions & DIRTY_UI_OVERLAY) {
             drawUiOverlay(tft, app);
@@ -3324,7 +3550,19 @@ void handleAppTouch(SimpleUI& ui, AppState& app, int tx, int ty) {
 
   switch (app.currentScreen) {
     case SCREEN_HOME:
+      if (edgeAwareRectHit(ui, tx, ty,
+                           HOME_SERVER_STATUS_X - 8, HOME_SERVER_STATUS_Y - 6,
+                           HOME_SERVER_STATUS_W + 16, HOME_SERVER_STATUS_H + 12, 4, 4)) {
+        appUiSwitchScreen(app, SCREEN_PROFILE);
+        requestPlayerAccounts(app, false);
+        return;
+      }
       if (edgeAwareButtonHit(ui, btnHomePlay, tx, ty, 10, 8)) {
+        if (serverOnlySpinMode() && (!serverApi.authorized() || !serverBootstrapDone)) {
+          appUiSwitchScreen(app, SCREEN_PROFILE);
+          requestPlayerAccounts(app, false);
+          return;
+        }
         queueScreenAction(app, ACTION_GOTO_MODE_SELECT, BTN_ANIM_HOME_PLAY);
         return;
       }
@@ -3383,12 +3621,8 @@ void handleAppTouch(SimpleUI& ui, AppState& app, int tx, int ty) {
         app.fullRedrawRequested = true;
         return;
       }
-      if (edgeAwareButtonHit(ui, btnGameSpin, tx, ty, 10, 8)) {
-        startSlotSpin(app);
-        return;
-      }
       if (!app.slotSpinActive && !serverSpinAwaiting &&
-          edgeAwareRectHit(ui, tx, ty, SLOT_MINUS_X, SLOT_MINUS_Y, SLOT_MINUS_W, SLOT_MINUS_H, 6, 6)) {
+          slotControlHit(ui, tx, ty, SLOT_MINUS_X - 4, SLOT_MINUS_Y, 58, SLOT_MINUS_H)) {
         const uint16_t newBet = slotAdjustBet(app.slotBetValue, -1);
         if (newBet != app.slotBetValue) {
           app.slotBetValue = newBet;
@@ -3398,7 +3632,7 @@ void handleAppTouch(SimpleUI& ui, AppState& app, int tx, int ty) {
         return;
       }
       if (!app.slotSpinActive && !serverSpinAwaiting &&
-          edgeAwareRectHit(ui, tx, ty, SLOT_PLUS_X, SLOT_PLUS_Y, SLOT_PLUS_W, SLOT_PLUS_H, 6, 6)) {
+          slotControlHit(ui, tx, ty, 118, SLOT_PLUS_Y, 160, SLOT_PLUS_H)) {
         const uint16_t newBet = slotAdjustBet(app.slotBetValue, 1);
         if (newBet != app.slotBetValue) {
           app.slotBetValue = newBet;
@@ -3409,9 +3643,8 @@ void handleAppTouch(SimpleUI& ui, AppState& app, int tx, int ty) {
       }
       if (!app.slotSpinActive &&
           !serverSpinAwaiting &&
-          !serverOnlySpinMode() &&
           app.slotMode == SLOT_MODE_3 &&
-          edgeAwareRectHit(ui, tx, ty, SLOT_AUTO_X, SLOT_AUTO_Y, SLOT_AUTO_W, SLOT_AUTO_H, 6, 6)) {
+          slotControlHit(ui, tx, ty, 160, SLOT_AUTO_Y, 212, SLOT_AUTO_H)) {
         app.slotAutoPlayEnabled = !app.slotAutoPlayEnabled;
         setSlotStatus(app, app.slotAutoPlayEnabled ? "AUTO PLAY ON" : "AUTO PLAY OFF");
         if (!app.slotAutoPlayEnabled) {
@@ -3420,6 +3653,10 @@ void handleAppTouch(SimpleUI& ui, AppState& app, int tx, int ty) {
           app.slotAutoPlayDueMs = millis() + SLOT_AUTOPLAY_DELAY_MS;
         }
         markDirtyRegions(app, DIRTY_GAME_AREA);
+        return;
+      }
+      if (slotControlHit(ui, tx, ty, 212, SLOT_SPIN_Y, SLOT_SPIN_X + SLOT_SPIN_W + 4, SLOT_SPIN_H)) {
+        startSlotSpin(app);
         return;
       }
       if (edgeAwareButtonHit(ui, btnBack, tx, ty, 10, 8)) {
@@ -3468,6 +3705,60 @@ void handleAppTouch(SimpleUI& ui, AppState& app, int tx, int ty) {
       break;
 
     case SCREEN_PROFILE:
+      if (edgeAwareButtonHit(ui, btnBack, tx, ty, 10, 8)) {
+        queueScreenAction(app, ACTION_GOTO_MENU, BTN_ANIM_BACK);
+        return;
+      }
+      if (edgeAwareButtonHit(ui, btnProfileRefresh, tx, ty, 10, 8)) {
+        requestPlayerAccounts(app, true);
+        return;
+      }
+      if (serverApi.accountCount() > PROFILE_PAGE_SIZE &&
+          edgeAwareButtonHit(ui, btnProfilePrev, tx, ty, 10, 8)) {
+        if (app.accountPage > 0) {
+          app.accountPage--;
+          app.fullRedrawRequested = true;
+        }
+        return;
+      }
+      if (serverApi.accountCount() > PROFILE_PAGE_SIZE &&
+          edgeAwareButtonHit(ui, btnProfileNext, tx, ty, 10, 8)) {
+        const uint8_t pageCount =
+          (uint8_t)((serverApi.accountCount() + PROFILE_PAGE_SIZE - 1) / PROFILE_PAGE_SIZE);
+        if ((uint8_t)(app.accountPage + 1) < pageCount) {
+          app.accountPage++;
+          app.fullRedrawRequested = true;
+        }
+        return;
+      }
+      if (serverApi.accountsReady()) {
+        const uint8_t startIndex = (uint8_t)(app.accountPage * PROFILE_PAGE_SIZE);
+        for (uint8_t offset = 0; offset < PROFILE_PAGE_SIZE; offset++) {
+          const uint8_t index = (uint8_t)(startIndex + offset);
+          if (index >= serverApi.accountCount()) {
+            break;
+          }
+          const ServerApiAccountInfo* account = serverApi.accountAt(index);
+          if (account == nullptr) {
+            continue;
+          }
+          const int x = (offset % 2 == 0) ? PROFILE_CARD_COL1_X : PROFILE_CARD_COL2_X;
+          const int y = (offset < 2) ? PROFILE_CARD_ROW1_Y : PROFILE_CARD_ROW2_Y;
+          if (!edgeAwareRectHit(ui, tx, ty, x, y, PROFILE_CARD_W, PROFILE_CARD_H, 6, 6)) {
+            continue;
+          }
+          const bool selected = strcmp(serverApi.selectedAccountId(), account->accountId) == 0;
+          if (selected && serverApi.authorized()) {
+            appUiSwitchScreen(app, SCREEN_HOME);
+            return;
+          }
+          app.accountPage = (uint8_t)(index / PROFILE_PAGE_SIZE);
+          beginSelectedAccountAuth(app, *account);
+          return;
+        }
+      }
+      break;
+
     case SCREEN_TOPUP:
       if (edgeAwareButtonHit(ui, btnBack, tx, ty, 10, 8)) {
         queueScreenAction(app, ACTION_GOTO_MENU, BTN_ANIM_BACK);

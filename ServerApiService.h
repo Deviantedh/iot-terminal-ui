@@ -16,6 +16,7 @@ public:
   void tick(bool wifiConnected, unsigned long nowMs, bool allowRequestStart);
   void resetSession();
 
+  bool requestAccounts();
   bool requestAuth();
   bool requestBalance();
   bool requestHealth();
@@ -39,6 +40,13 @@ public:
   bool healthKnown() const;
   bool healthOk() const;
   bool spinRequestPending(SlotMode mode) const;
+  bool accountsReady() const;
+  uint8_t accountCount() const;
+  const ServerApiAccountInfo* accountAt(uint8_t index) const;
+  bool hasSelectedAccount() const;
+  const char* selectedAccountId() const;
+  const char* selectedAccountName() const;
+  void selectAccount(const char* accountId, const char* displayName = nullptr);
 
 private:
   enum InternalState : uint8_t {
@@ -60,12 +68,17 @@ private:
   char deviceId[25];
   char authToken[65];
   char authUserName[33];
+  char selectedAccountIdValue[25];
+  char selectedAccountNameValue[33];
   bool isAuthorized;
   bool isServerReachable;
   int knownBalance;
   bool balanceReady;
   bool serverHealthKnown;
   bool serverHealthOk;
+  bool accountListReady;
+  ServerApiAccountInfo accounts[SERVER_API_MAX_ACCOUNTS];
+  uint8_t accountsCount;
   SlotSpinResult cachedSpin3;
   SlotSpinResult cachedSpin5;
   bool cachedSpin3Ready;
@@ -90,6 +103,7 @@ private:
   static bool extractBool(const String& body, const char* key, bool& out);
   static bool extractInt(const String& body, const char* key, int& out);
   static bool extractString(const String& body, const char* key, char* out, size_t outSize);
+  static bool extractAccounts(const String& body, ServerApiAccountInfo* out, uint8_t capacity, uint8_t& outCount);
   static bool extractSpinSymbols(const String& body, SlotMode mode, SlotSpinResult& out);
   static bool responseLooksOk(const String& body);
 };

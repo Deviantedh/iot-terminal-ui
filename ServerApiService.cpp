@@ -10,6 +10,7 @@ static const uint8_t REQUEST_BIT_SPIN_3 = 1 << 2;
 static const uint8_t REQUEST_BIT_SPIN_5 = 1 << 3;
 static const uint8_t REQUEST_BIT_HEALTH = 1 << 4;
 static const uint8_t REQUEST_BIT_EVENT = 1 << 5;
+static const uint8_t REQUEST_BIT_ACCOUNTS = 1 << 6;
 
 ServerApiService::ServerApiService()
   : config(SERVER_API_DEFAULT_CONFIG),
@@ -27,15 +28,25 @@ ServerApiService::ServerApiService()
     balanceReady(false),
     serverHealthKnown(false),
     serverHealthOk(false),
+    accountListReady(false),
+    accountsCount(0),
     cachedSpin3Ready(false),
     cachedSpin5Ready(false) {
   deviceId[0] = '\0';
   authToken[0] = '\0';
   strncpy(authUserName, "PLAYER", sizeof(authUserName) - 1);
   authUserName[sizeof(authUserName) - 1] = '\0';
+  selectedAccountIdValue[0] = '\0';
+  selectedAccountNameValue[0] = '\0';
   pendingEvent.eventType[0] = '\0';
   pendingEvent.message[0] = '\0';
   pendingEvent.value = 0;
+  for (uint8_t i = 0; i < SERVER_API_MAX_ACCOUNTS; i++) {
+    accounts[i].accountId[0] = '\0';
+    accounts[i].displayName[0] = '\0';
+    accounts[i].balance = 0;
+    accounts[i].balanceKnown = false;
+  }
 }
 
 void ServerApiService::begin(const ServerApiConfig& cfg) {
@@ -96,10 +107,14 @@ void ServerApiService::resetSession() {
 }
 
 bool ServerApiService::requestAuth() {
-  if (isAuthorized) {
+  if (isAuthorized || selectedAccountIdValue[0] == '\0') {
     return true;
   }
   return queueRequest(SERVER_API_REQUEST_AUTH);
+}
+
+bool ServerApiService::requestAccounts() {
+  return queueRequest(SERVER_API_REQUEST_ACCOUNTS);
 }
 
 bool ServerApiService::requestBalance() {
@@ -111,8 +126,10 @@ bool ServerApiService::requestHealth() {
 }
 
 void ServerApiService::cancelBackgroundRequests() {
-  pendingMask &= (uint8_t)~(REQUEST_BIT_AUTH | REQUEST_BIT_BALANCE | REQUEST_BIT_HEALTH | REQUEST_BIT_EVENT);
-  if (currentRequest == SERVER_API_REQUEST_AUTH ||
+  pendingMask &= (uint8_t)~(REQUEST_BIT_AUTH | REQUEST_BIT_BALANCE | REQUEST_BIT_HEALTH |
+                            REQUEST_BIT_EVENT | REQUEST_BIT_ACCOUNTS);
+  if (currentRequest == SERVER_API_REQUEST_ACCOUNTS ||
+      currentRequest == SERVER_API_REQUEST_AUTH ||
       currentRequest == SERVER_API_REQUEST_BALANCE ||
       currentRequest == SERVER_API_REQUEST_HEALTH ||
       currentRequest == SERVER_API_REQUEST_EVENT) {
@@ -199,6 +216,54 @@ bool ServerApiService::busy() const {
          pendingMask != 0;
 }
 
+bool ServerApiService::accountsReady() const {
+  return accountListReady;
+}
+
+uint8_t ServerApiService::accountCount() const {
+  return accountsCount;
+}
+
+const ServerApiAccountInfo* ServerApiService::accountAt(uint8_t index) const {
+  if (index >= accountsCount) {
+    return nullptr;
+  }
+  return &accounts[index];
+}
+
+bool ServerApiService::hasSelectedAccount() const {
+  return selectedAccountIdValue[0] != '\0';
+}
+
+const char* ServerApiService::selectedAccountId() const {
+  return selectedAccountIdValue;
+}
+
+const char* ServerApiService::selectedAccountName() const {
+  if (isAuthorized && authUserName[0] != '\0') {
+    return authUserName;
+  }
+  return selectedAccountNameValue;
+}
+
+void ServerApiService::selectAccount(const char* accountId, const char* displayName) {
+  if (accountId == nullptr) {
+    accountId = "";
+  }
+  strncpy(selectedAccountIdValue, accountId, sizeof(selectedAccountIdValue) - 1);
+  selectedAccountIdValue[sizeof(selectedAccountIdValue) - 1] = '\0';
+  selectedAccountNameValue[0] = '\0';
+  if (displayName != nullptr) {
+    strncpy(selectedAccountNameValue, displayName, sizeof(selectedAccountNameValue) - 1);
+    selectedAccountNameValue[sizeof(selectedAccountNameValue) - 1] = '\0';
+  }
+  isAuthorized = false;
+  authToken[0] = '\0';
+  strncpy(authUserName, selectedAccountNameValue, sizeof(authUserName) - 1);
+  authUserName[sizeof(authUserName) - 1] = '\0';
+  balanceReady = false;
+}
+
 bool ServerApiService::hasSessionToken() const {
   return authToken[0] != '\0';
 }
@@ -253,6 +318,9 @@ bool ServerApiService::queueRequest(ServerApiRequestKind kind) {
 
   uint8_t bit = 0;
   switch (kind) {
+    case SERVER_API_REQUEST_ACCOUNTS:
+      bit = REQUEST_BIT_ACCOUNTS;
+      break;
     case SERVER_API_REQUEST_AUTH:
       bit = REQUEST_BIT_AUTH;
       break;
@@ -286,6 +354,9 @@ bool ServerApiService::startNextRequest(unsigned long nowMs) {
   }
   if (pendingMask & REQUEST_BIT_SPIN_5) {
     return startRequest(SERVER_API_REQUEST_SPIN_5, nowMs);
+  }
+  if (pendingMask & REQUEST_BIT_ACCOUNTS) {
+    return startRequest(SERVER_API_REQUEST_ACCOUNTS, nowMs);
   }
   if ((pendingMask & REQUEST_BIT_AUTH) && !isAuthorized) {
     return startRequest(SERVER_API_REQUEST_AUTH, nowMs);
@@ -377,6 +448,9 @@ void ServerApiService::failRequest(ServerApiLastStatus status) {
 
 void ServerApiService::clearActiveRequest() {
   switch (currentRequest) {
+    case SERVER_API_REQUEST_ACCOUNTS:
+      pendingMask &= (uint8_t)~REQUEST_BIT_ACCOUNTS;
+      break;
     case SERVER_API_REQUEST_AUTH:
       pendingMask &= (uint8_t)~REQUEST_BIT_AUTH;
       break;
@@ -415,6 +489,12 @@ String ServerApiService::requestUrl(ServerApiRequestKind kind) const {
 
 String ServerApiService::requestPath(ServerApiRequestKind kind) const {
   switch (kind) {
+    case SERVER_API_REQUEST_ACCOUNTS: {
+      String path = "/api/v1/devices/";
+      path += deviceId;
+      path += "/accounts";
+      return path;
+    }
     case SERVER_API_REQUEST_AUTH:
       return "/api/v1/devices/auth";
     case SERVER_API_REQUEST_BALANCE: {
@@ -461,6 +541,8 @@ bool ServerApiService::requestIsPost(ServerApiRequestKind kind) const {
 String ServerApiService::authBody() const {
   String body = "{\"deviceId\":";
   body += jsonString(deviceId);
+  body += ",\"accountId\":";
+  body += jsonString(selectedAccountIdValue);
   body += ",\"firmwareVersion\":\"iot_terminal_ui\",\"capabilities\":[\"slot3\",\"slot5\"]}";
   return body;
 }
@@ -517,6 +599,35 @@ bool ServerApiService::handleBody(ServerApiRequestKind kind, int httpStatus, con
   }
 
   switch (kind) {
+    case SERVER_API_REQUEST_ACCOUNTS: {
+      uint8_t parsedCount = 0;
+      if (!extractAccounts(body, accounts, SERVER_API_MAX_ACCOUNTS, parsedCount)) {
+        return false;
+      }
+      accountsCount = parsedCount;
+      accountListReady = true;
+      bool selectedStillPresent = false;
+      const ServerApiAccountInfo* firstAccount = (accountsCount > 0) ? &accounts[0] : nullptr;
+      for (uint8_t i = 0; i < accountsCount; i++) {
+        if (strcmp(accounts[i].accountId, selectedAccountIdValue) == 0) {
+          selectedStillPresent = true;
+          strncpy(selectedAccountNameValue, accounts[i].displayName, sizeof(selectedAccountNameValue) - 1);
+          selectedAccountNameValue[sizeof(selectedAccountNameValue) - 1] = '\0';
+          break;
+        }
+      }
+      if (!selectedStillPresent) {
+        selectedAccountIdValue[0] = '\0';
+        selectedAccountNameValue[0] = '\0';
+        isAuthorized = false;
+        authToken[0] = '\0';
+        authUserName[0] = '\0';
+      }
+      if (selectedAccountIdValue[0] == '\0' && firstAccount != nullptr && accountsCount == 1) {
+        selectAccount(firstAccount->accountId, firstAccount->displayName);
+      }
+      return true;
+    }
     case SERVER_API_REQUEST_AUTH: {
       bool authorizedValue = false;
       if (!extractBool(body, "authorized", authorizedValue) || !authorizedValue) {
@@ -526,6 +637,10 @@ bool ServerApiService::handleBody(ServerApiRequestKind kind, int httpStatus, con
       extractString(body, "token", authToken, sizeof(authToken));
       if (!extractString(body, "userName", authUserName, sizeof(authUserName))) {
         extractString(body, "username", authUserName, sizeof(authUserName));
+      }
+      if (authUserName[0] != '\0') {
+        strncpy(selectedAccountNameValue, authUserName, sizeof(selectedAccountNameValue) - 1);
+        selectedAccountNameValue[sizeof(selectedAccountNameValue) - 1] = '\0';
       }
       return true;
     }
@@ -631,6 +746,43 @@ bool ServerApiService::extractInt(const String& body, const char* key, int& out)
     return false;
   }
   out = body.substring(valueStart, valueEnd).toInt();
+  return true;
+}
+
+bool ServerApiService::extractAccounts(const String& body, ServerApiAccountInfo* out, uint8_t capacity, uint8_t& outCount) {
+  outCount = 0;
+  int accountsPos = body.indexOf("\"accounts\"");
+  if (accountsPos < 0) {
+    return false;
+  }
+  int arrayStart = body.indexOf('[', accountsPos);
+  if (arrayStart < 0) {
+    return false;
+  }
+  int cursor = arrayStart + 1;
+  while (cursor < (int)body.length() && outCount < capacity) {
+    int objectStart = body.indexOf('{', cursor);
+    if (objectStart < 0) {
+      break;
+    }
+    int objectEnd = body.indexOf('}', objectStart);
+    if (objectEnd < 0) {
+      return false;
+    }
+    String item = body.substring(objectStart, objectEnd + 1);
+    if (extractString(item, "accountId", out[outCount].accountId, sizeof(out[outCount].accountId))) {
+      if (!extractString(item, "displayName", out[outCount].displayName, sizeof(out[outCount].displayName))) {
+        extractString(item, "userName", out[outCount].displayName, sizeof(out[outCount].displayName));
+      }
+      out[outCount].balanceKnown = extractInt(item, "balance", out[outCount].balance);
+      outCount++;
+    }
+    cursor = objectEnd + 1;
+    int arrayEnd = body.indexOf(']', cursor);
+    if (arrayEnd >= 0 && cursor > arrayEnd) {
+      break;
+    }
+  }
   return true;
 }
 

@@ -6,6 +6,7 @@
 
 enum ServerApiRequestKind : uint8_t {
   SERVER_API_REQUEST_NONE = 0,
+  SERVER_API_REQUEST_ACCOUNTS,
   SERVER_API_REQUEST_AUTH,
   SERVER_API_REQUEST_BALANCE,
   SERVER_API_REQUEST_SPIN_3,
@@ -25,6 +26,15 @@ enum ServerApiLastStatus : uint8_t {
   SERVER_API_LAST_PARSE_ERROR,
   SERVER_API_LAST_OFFLINE,
   SERVER_API_LAST_DISABLED
+};
+
+static const uint8_t SERVER_API_MAX_ACCOUNTS = 8;
+
+struct ServerApiAccountInfo {
+  char accountId[25];
+  char displayName[33];
+  int balance;
+  bool balanceKnown;
 };
 
 struct ServerApiAuthResponse {

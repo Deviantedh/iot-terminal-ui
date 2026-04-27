@@ -2,7 +2,7 @@ openapi: 3.0.3
 info:
   title: IoT Terminal Server API
   version: 0.1.0
-  description: Contract for optional server-backed device auth, balance sync, slot spin results, and device events.
+  description: Contract for device account selection, account-scoped auth, balance sync, slot spin results, and device events.
 servers:
   - url: http://62.113.118.76:8080/api/v1
 paths:
@@ -19,7 +19,7 @@ paths:
                 $ref: "#/components/schemas/StatusResponse"
   /devices/auth:
     post:
-      summary: Authorize a device and create or refresh a session.
+      summary: Authorize a device for one selected account and create or refresh a session.
       operationId: authorizeDevice
       requestBody:
         required: true
@@ -40,9 +40,28 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/ErrorResponse"
+  /devices/{deviceId}/accounts:
+    get:
+      summary: Return the list of player accounts available on this device.
+      operationId: listDeviceAccounts
+      parameters:
+        - $ref: "#/components/parameters/DeviceIdPath"
+      responses:
+        "200":
+          description: List of selectable accounts for this device.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/DeviceAccountsResponse"
+        default:
+          description: Server error response.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
   /devices/{deviceId}/balance:
     get:
-      summary: Return current balance for a device or linked player.
+      summary: Return current balance for the authorized account on this device session.
       operationId: getDeviceBalance
       security:
         - bearerAuth: []
@@ -195,12 +214,18 @@ components:
       type: object
       required:
         - deviceId
+        - accountId
       properties:
         deviceId:
           type: string
           minLength: 1
           maxLength: 24
           example: esp8266-12AB34
+        accountId:
+          type: string
+          minLength: 1
+          maxLength: 24
+          example: player-01
         firmwareVersion:
           type: string
           maxLength: 32
@@ -220,11 +245,15 @@ components:
       required:
         - status
         - authorized
+        - accountId
       properties:
         status:
           $ref: "#/components/schemas/Status"
         authorized:
           type: boolean
+        accountId:
+          type: string
+          maxLength: 24
         token:
           type: string
           maxLength: 64
@@ -232,7 +261,43 @@ components:
         userName:
           type: string
           maxLength: 32
-          description: Display name shown on the device home screen after one-time authorization.
+          description: Display name shown on the device home screen after authorization.
+        message:
+          type: string
+          maxLength: 96
+    DeviceAccountSummary:
+      type: object
+      required:
+        - accountId
+        - displayName
+      properties:
+        accountId:
+          type: string
+          minLength: 1
+          maxLength: 24
+          example: player-01
+        displayName:
+          type: string
+          maxLength: 32
+          example: Alex
+        balance:
+          type: integer
+          minimum: 0
+          description: Optional preview balance that may be shown in the account picker before full auth.
+          example: 1250
+    DeviceAccountsResponse:
+      type: object
+      required:
+        - status
+        - accounts
+      properties:
+        status:
+          $ref: "#/components/schemas/Status"
+        accounts:
+          type: array
+          maxItems: 8
+          items:
+            $ref: "#/components/schemas/DeviceAccountSummary"
         message:
           type: string
           maxLength: 96
