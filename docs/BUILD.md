@@ -98,7 +98,7 @@ arduino-cli compile --fqbn esp8266:esp8266:nodemcuv2 --verbose .
 - Built-in fallback Wi-Fi networks are defined in `WiFiProfiles.cpp` and should be reviewed per device/project handoff.
 - `build/` is a generated local artifact and should not be treated as source.
 - The UI uses partial redraw and profiling already; avoid large redraw refactors unless necessary.
-- `GAME` content is still intentionally placeholder-only; only the balance entry point is wired.
+- `GAME` contains the current slot-machine gameplay; future changes should keep the existing screen/redraw contracts intact.
 - `GPIO16` is acceptable for the current buzzer output path, but keep in mind its usual ESP8266 limitations outside this use case.
 - Recommended Arduino IDE MMU option is `16KB cache + 48KB IRAM (IRAM)`.
 - Reason: on-device testing reduced IRAM pressure from roughly `94%` to about `70%` and did not show visible UI slowdown.

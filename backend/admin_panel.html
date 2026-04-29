@@ -1,0 +1,101 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>IoT Terminal - Admin Control Center</title>
+  <style>
+    :root { --bg:#060d1e; --card:#111b33; --line:#2a3d66; --text:#e8eeff; --muted:#9fb2d8; --accent:#4f8cff; }
+    * { box-sizing:border-box; } body { margin:0; font-family:Inter,Arial,sans-serif; background:var(--bg); color:var(--text); }
+    .container { max-width:1280px; margin:0 auto; padding:16px; } .card { background:var(--card); border:1px solid var(--line); border-radius:14px; padding:14px; }
+    .hidden{display:none!important;} .toolbar{display:flex;gap:8px;flex-wrap:wrap;align-items:center;} .muted{color:var(--muted);font-size:12px;}
+    input,button{background:#0a1328;border:1px solid var(--line);color:var(--text);border-radius:10px;padding:8px 10px;} button.primary{background:var(--accent);border-color:transparent;cursor:pointer;}
+    .tabs{display:flex;gap:8px;flex-wrap:wrap;margin:12px 0;} .tab-btn{background:#0b152b;border:1px solid var(--line);border-radius:999px;color:var(--muted);padding:8px 12px;cursor:pointer;} .tab-btn.active{background:var(--accent);color:#fff;border-color:transparent;}
+    .grid{display:grid;gap:12px;} .stats{grid-template-columns:repeat(auto-fit,minmax(180px,1fr));} .stat-value{font-size:30px;font-weight:700;}
+    table{width:100%;border-collapse:collapse;margin-top:8px;} th,td{border-bottom:1px solid #203257;padding:8px;text-align:left;font-size:12px;} th{background:#1d2b4f;}
+    .split{display:grid;gap:12px;grid-template-columns:1fr;} @media(min-width:980px){.split{grid-template-columns:1fr 1fr;}}
+    .status-ok{color:#2ecc71;font-weight:600;} .status-err{color:#ff7d7d;font-weight:600;}
+    .slider-wrap{display:grid;grid-template-columns:180px 1fr 72px;gap:8px;align-items:center;}
+  </style>
+</head>
+<body>
+  <div class="container">
+    <div id="authCard" class="card">
+      <h1>Admin Control Center</h1>
+      <div class="toolbar" style="margin-top:10px;">
+        <input id="adminUsername" value="admin" placeholder="admin username">
+        <input id="adminPassword" value="admin123" type="password" placeholder="admin password">
+        <button class="primary" id="loginBtn">Login</button>
+        <span id="authStatus" class="muted"></span>
+      </div>
+    </div>
+
+    <div id="app" class="hidden">
+      <div class="toolbar"><h2 style="margin-right:auto;">Backend Admin Panel</h2><span id="adminBadge" class="muted"></span><button id="refreshAll" class="primary">Refresh</button></div>
+      <div class="tabs">
+        <button class="tab-btn active" data-tab="dashboard">Dashboard</button>
+        <button class="tab-btn" data-tab="users">Users & Devices</button>
+        <button class="tab-btn" data-tab="statistics">Statistics</button>
+        <button class="tab-btn" data-tab="luck">Luck Settings</button>
+      </div>
+
+      <section class="tab-pane" data-pane="dashboard">
+        <div class="grid stats">
+          <div class="card"><div class="muted">Users</div><div class="stat-value" id="sUsers">0</div></div>
+          <div class="card"><div class="muted">Admins</div><div class="stat-value" id="sAdmins">0</div></div>
+          <div class="card"><div class="muted">Balances</div><div class="stat-value" id="sBalances">0</div></div>
+          <div class="card"><div class="muted">Sessions</div><div class="stat-value" id="sSessions">0</div></div>
+          <div class="card"><div class="muted">Recent Spins</div><div class="stat-value" id="sSpins">0</div></div>
+          <div class="card"><div class="muted">Recent Events</div><div class="stat-value" id="sEvents">0</div></div>
+        </div>
+      </section>
+
+      <section class="tab-pane hidden" data-pane="users">
+        <div class="split">
+          <div class="card"><h3>Create User</h3><input id="newUserUsername" placeholder="username"><input id="newUserPassword" placeholder="password"><input id="newUserDisplay" placeholder="display name"><input id="newUserDevice" placeholder="deviceId (optional)"><input id="newUserBalance" type="number" placeholder="initial balance"><button class="primary" id="createUserBtn">Create User</button><div id="createUserStatus" class="muted"></div></div>
+          <div class="card"><h3>Create Admin</h3><input id="newAdminUsername" placeholder="admin username"><input id="newAdminPassword" placeholder="admin password"><button class="primary" id="createAdminBtn">Create Admin</button><div id="createAdminStatus" class="muted"></div></div>
+          <div class="card"><h3>Create Account + Bind</h3><input id="addAccountUsername" placeholder="existing username"><input id="addAccountName" placeholder="display name"><input id="addAccountDevice" placeholder="deviceId"><input id="addAccountBalance" type="number" placeholder="initial balance"><button class="primary" id="createAccountBtn">Create Account</button><div id="createAccountStatus" class="muted"></div></div>
+          <div class="card"><h3>Set Balance</h3><input id="setBalanceDevice" placeholder="deviceId"><input id="setBalanceAccount" placeholder="accountId"><input id="setBalanceValue" type="number" placeholder="new balance"><button class="primary" id="setBalanceBtn">Update Balance</button><div id="setBalanceStatus" class="muted"></div></div>
+        </div>
+        <div class="card" style="margin-top:12px;">
+          <h3>Device Accounts</h3>
+          <div class="toolbar"><input id="lookupDeviceId" placeholder="deviceId"><button class="primary" id="lookupDeviceBtn">Load</button></div>
+          <table><thead><tr><th>Account ID</th><th>Name</th><th>Balance</th></tr></thead><tbody id="deviceAccountsBody"></tbody></table>
+        </div>
+        <div class="card" style="margin-top:12px;"><h3>Users and Accounts</h3><table><thead><tr><th>Username</th><th>Account IDs</th></tr></thead><tbody id="usersBody"></tbody></table></div>
+      </section>
+
+      <section class="tab-pane hidden" data-pane="statistics">
+        <div class="split">
+          <div class="card"><h3>Recent Spins</h3><table><thead><tr><th>Time</th><th>Device</th><th>Account</th><th>Mode</th><th>Bet</th><th>x</th><th>Payout</th><th>Balance</th></tr></thead><tbody id="spinsBody"></tbody></table></div>
+          <div class="card"><h3>Recent Events</h3><table><thead><tr><th>Time</th><th>Device</th><th>Account</th><th>Type</th><th>Value</th><th>Message</th></tr></thead><tbody id="eventsBody"></tbody></table></div>
+        </div>
+      </section>
+
+      <section class="tab-pane hidden" data-pane="luck">
+        <div class="card"><h3>Luck Settings</h3><div id="sliders"></div><div class="toolbar" style="margin-top:12px;"><button class="primary" id="saveLuckBtn">Save</button><span id="saveLuckStatus" class="muted"></span></div></div>
+      </section>
+    </div>
+  </div>
+
+  <script>
+    const S = { adminToken:"", sliderConfig:{ win_bias:[0,3,0.01], base_win_chance_3:[0,1,0.001], base_win_chance_5:[0,1,0.001], loss_streak_step:[0,0.2,0.001], max_win_chance_3:[0,1,0.001], max_win_chance_5:[0,1,0.001] } };
+    const $ = (id)=>document.getElementById(id); const dt=(u)=>u?new Date(u*1000).toLocaleString():"";
+    async function api(path, method="GET", body=null, token=null){ const headers={"Content-Type":"application/json"}; if(token) headers.Authorization=`Bearer ${token}`; const r=await fetch(path,{method,headers,body:body?JSON.stringify(body):null}); const d=await r.json().catch(()=>({})); if(!r.ok) throw new Error(d.message||`${r.status}`); return d; }
+    function setStatus(id,msg,ok=true){ const e=$(id); e.textContent=msg; e.className=ok?"status-ok":"status-err"; }
+    function rows(id,r){ $(id).innerHTML=r.join(""); }
+    function switchTab(name){ document.querySelectorAll(".tab-btn").forEach((b)=>b.classList.toggle("active", b.dataset.tab===name)); document.querySelectorAll(".tab-pane").forEach((p)=>p.classList.toggle("hidden", p.dataset.pane!==name)); }
+    function renderSettings(settings){ const root=$("sliders"); root.innerHTML=""; Object.entries(S.sliderConfig).forEach(([k,c])=>{ const [min,max,step]=c; const v=settings[k]??min; const d=document.createElement("div"); d.className="slider-wrap"; d.innerHTML=`<label>${k}</label><input type="range" min="${min}" max="${max}" step="${step}" value="${v}" id="s_${k}"><input type="number" min="${min}" max="${max}" step="${step}" value="${v}" id="n_${k}">`; root.appendChild(d); d.querySelector(`#s_${k}`).addEventListener("input",(e)=>d.querySelector(`#n_${k}`).value=e.target.value); d.querySelector(`#n_${k}`).addEventListener("input",(e)=>d.querySelector(`#s_${k}`).value=e.target.value); }); }
+    async function refreshOverview(){ const d=await api("/api/v1/backend/admin/overview","GET",null,S.adminToken); $("sUsers").textContent=d.summary.users; $("sAdmins").textContent=d.summary.admins; $("sBalances").textContent=d.summary.balances; $("sSessions").textContent=d.summary.activeSessions; $("sSpins").textContent=d.summary.recentSpins; $("sEvents").textContent=d.summary.recentEvents; rows("usersBody", d.users.map((u)=>`<tr><td>${u.username}</td><td>${(u.accounts||[]).map((a)=>a.accountId).join("<br>")}</td></tr>`)); rows("spinsBody", d.spins.slice(0,120).map((s)=>`<tr><td>${dt(s.created_at)}</td><td>${s.device_id}</td><td>${s.account_id}</td><td>${s.mode}</td><td>${s.bet}</td><td>${s.payout_multiplier}</td><td>${s.payout}</td><td>${s.balance_after}</td></tr>`)); rows("eventsBody", d.events.slice(0,120).map((e)=>`<tr><td>${dt(e.created_at)}</td><td>${e.device_id}</td><td>${e.account_id||""}</td><td>${e.event_type}</td><td>${e.value??""}</td><td>${e.message||""}</td></tr>`)); renderSettings(d.settings||{}); }
+    $("loginBtn").addEventListener("click", async()=>{ try{ const d=await api("/api/v1/backend/admin/login","POST",{username:$("adminUsername").value.trim(),password:$("adminPassword").value}); S.adminToken=d.token; $("authCard").classList.add("hidden"); $("app").classList.remove("hidden"); $("adminBadge").textContent=`${d.admin.username} (${d.admin.isSuperuser?"superuser":"admin"})`; await refreshOverview(); }catch(e){ setStatus("authStatus", e.message, false);} });
+    $("refreshAll").addEventListener("click", async()=>{ try{await refreshOverview();}catch(e){alert(e.message);} });
+    document.querySelectorAll(".tab-btn").forEach((b)=>b.addEventListener("click",()=>switchTab(b.dataset.tab)));
+    $("createUserBtn").addEventListener("click", async()=>{ try{ await api("/api/v1/backend/admin/users","POST",{username:$("newUserUsername").value.trim(),password:$("newUserPassword").value,displayName:$("newUserDisplay").value.trim()||$("newUserUsername").value.trim(),deviceId:$("newUserDevice").value.trim()||undefined,initialBalance:$("newUserBalance").value?Number($("newUserBalance").value):0},S.adminToken); setStatus("createUserStatus","User created"); await refreshOverview(); }catch(e){ setStatus("createUserStatus",e.message,false);} });
+    $("createAdminBtn").addEventListener("click", async()=>{ try{ await api("/api/v1/backend/admin/admins","POST",{username:$("newAdminUsername").value.trim(),password:$("newAdminPassword").value},S.adminToken); setStatus("createAdminStatus","Admin created"); await refreshOverview(); }catch(e){ setStatus("createAdminStatus",e.message,false);} });
+    $("createAccountBtn").addEventListener("click", async()=>{ try{ await api("/api/v1/backend/admin/accounts","POST",{username:$("addAccountUsername").value.trim(),displayName:$("addAccountName").value.trim()||$("addAccountUsername").value.trim(),deviceId:$("addAccountDevice").value.trim(),initialBalance:$("addAccountBalance").value?Number($("addAccountBalance").value):0},S.adminToken); setStatus("createAccountStatus","Account created"); await refreshOverview(); }catch(e){ setStatus("createAccountStatus",e.message,false);} });
+    $("setBalanceBtn").addEventListener("click", async()=>{ try{ await api("/api/v1/backend/admin/balance","PATCH",{deviceId:$("setBalanceDevice").value.trim(),accountId:$("setBalanceAccount").value.trim(),balance:Number($("setBalanceValue").value)},S.adminToken); setStatus("setBalanceStatus","Balance updated"); await refreshOverview(); }catch(e){ setStatus("setBalanceStatus",e.message,false);} });
+    $("lookupDeviceBtn").addEventListener("click", async()=>{ try{ const d=await api(`/api/v1/backend/admin/devices/${encodeURIComponent($("lookupDeviceId").value.trim())}/accounts`,"GET",null,S.adminToken); rows("deviceAccountsBody", d.accounts.map((a)=>`<tr><td>${a.accountId}</td><td>${a.displayName}</td><td>${a.balance}</td></tr>`)); }catch(e){ rows("deviceAccountsBody",[`<tr><td colspan="3" class="status-err">${e.message}</td></tr>`]); } });
+    $("saveLuckBtn").addEventListener("click", async()=>{ try{ const p={}; Object.keys(S.sliderConfig).forEach((k)=>p[k]=Number($(`n_${k}`).value)); const d=await api("/api/v1/backend/admin/settings/luck","PUT",p,S.adminToken); renderSettings(d.settings); setStatus("saveLuckStatus","Luck updated"); }catch(e){ setStatus("saveLuckStatus",e.message,false);} });
+  </script>
+</body>
+</html>

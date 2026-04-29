@@ -45,11 +45,11 @@ should go through `AppIntegration`.
 
 Header:
 
-- [`/Users/rublev/DEV/iot/iot_terminal_ui/AppIntegration.h`](/Users/rublev/DEV/iot/iot_terminal_ui/AppIntegration.h)
+- `AppIntegration.h`
 
 Server API contract:
 
-- [`/Users/rublev/DEV/iot/iot_terminal_ui/docs/server-api.openapi.yaml`](/Users/rublev/DEV/iot/iot_terminal_ui/docs/server-api.openapi.yaml)
+- `docs/server-api.openapi.yaml`
 
 Main entry points:
 

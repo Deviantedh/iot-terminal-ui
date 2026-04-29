@@ -1,0 +1,246 @@
+<!doctype html>
+<html lang="ru">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>IoT Terminal — Личный кабинет</title>
+  <style>
+    :root{
+      --bg:#06101f; --bg2:#0a1730; --card:#101d36; --card2:#132644; --line:#27446f;
+      --text:#edf4ff; --muted:#9fb4d8; --soft:#d7e4ff; --accent:#5b8cff; --accent2:#7c5cff;
+      --good:#32d583; --bad:#ff6b6b; --warn:#fdb022; --shadow:0 18px 60px rgba(0,0,0,.35);
+    }
+    *{box-sizing:border-box} html{scroll-behavior:smooth}
+    body{margin:0;min-height:100vh;font-family:Inter,system-ui,-apple-system,BlinkMacSystemFont,"Segoe UI",Arial,sans-serif;color:var(--text);background:
+      radial-gradient(circle at top left, rgba(91,140,255,.22), transparent 34rem),
+      radial-gradient(circle at 80% 8%, rgba(124,92,255,.16), transparent 28rem),
+      linear-gradient(180deg,var(--bg),#040913 80%);}
+    button,input{font:inherit} button{cursor:pointer}
+    .wrap{width:min(1180px,100%);margin:0 auto;padding:22px}
+    .hero{position:relative;overflow:hidden;border:1px solid rgba(125,160,230,.28);border-radius:28px;padding:28px;background:linear-gradient(135deg,rgba(18,37,70,.96),rgba(12,25,50,.88));box-shadow:var(--shadow)}
+    .hero:after{content:"";position:absolute;right:-90px;top:-110px;width:300px;height:300px;border-radius:999px;background:rgba(91,140,255,.18);filter:blur(8px)}
+    .hero-top{position:relative;z-index:1;display:flex;gap:18px;align-items:flex-start;justify-content:space-between;flex-wrap:wrap}
+    .brand{display:flex;gap:14px;align-items:center}.logo{width:52px;height:52px;border-radius:18px;background:linear-gradient(135deg,var(--accent),var(--accent2));display:grid;place-items:center;font-size:25px;box-shadow:0 14px 34px rgba(91,140,255,.28)}
+    h1{font-size:clamp(30px,5vw,54px);line-height:1;margin:0 0 10px}.lead{color:var(--muted);font-size:17px;max-width:760px;margin:0}
+    .pill{display:inline-flex;gap:8px;align-items:center;border:1px solid rgba(159,180,216,.3);background:rgba(8,17,35,.5);color:var(--soft);border-radius:999px;padding:9px 12px;font-size:13px}
+    .top-actions{display:flex;gap:10px;flex-wrap:wrap}.btn{border:1px solid var(--line);background:#0b1730;color:var(--text);border-radius:14px;padding:11px 16px;transition:.18s transform,.18s border-color,.18s opacity}.btn:hover{transform:translateY(-1px);border-color:#5f88d6}.btn.primary{border-color:transparent;background:linear-gradient(135deg,var(--accent),var(--accent2));box-shadow:0 12px 26px rgba(91,140,255,.24)}.btn.ghost{background:rgba(10,23,48,.45)}.btn.danger{background:#2a1020;border-color:#7d2945}.btn:disabled{opacity:.45;cursor:not-allowed;transform:none}
+    .grid{display:grid;gap:16px}.auth-grid{grid-template-columns:1fr;margin-top:16px}@media(min-width:900px){.auth-grid{grid-template-columns:1fr 1fr}}
+    .card{border:1px solid rgba(117,151,212,.28);background:linear-gradient(180deg,rgba(18,32,61,.96),rgba(12,23,45,.96));border-radius:24px;padding:20px;box-shadow:0 12px 40px rgba(0,0,0,.22)}
+    .card h2,.card h3{margin:0 0 12px}.muted{color:var(--muted)}.small{font-size:13px}.hidden{display:none!important}
+    .form{display:grid;gap:10px}.row{display:grid;gap:10px}.row.two{grid-template-columns:1fr}.row.three{grid-template-columns:1fr}@media(min-width:720px){.row.two{grid-template-columns:1fr 1fr}.row.three{grid-template-columns:1fr 1fr 1fr}}
+    label{display:grid;gap:7px;color:var(--muted);font-size:13px} input{width:100%;border:1px solid var(--line);outline:0;background:#07142a;color:var(--text);border-radius:14px;padding:13px 14px}input:focus{border-color:#6e9cff;box-shadow:0 0 0 4px rgba(91,140,255,.14)}
+    .status{min-height:24px;font-size:14px}.ok{color:var(--good)}.err{color:var(--bad)}.warn{color:var(--warn)}
+    .dash-head{display:flex;gap:16px;align-items:center;justify-content:space-between;flex-wrap:wrap;margin:18px 0}.user-chip{display:flex;gap:12px;align-items:center}.avatar{width:48px;height:48px;border-radius:17px;background:linear-gradient(135deg,#42d392,#5b8cff);display:grid;place-items:center;font-weight:900;color:#06101f}.tabs{display:flex;gap:8px;flex-wrap:wrap}.tab{border:1px solid var(--line);background:#09172f;color:var(--muted);border-radius:999px;padding:9px 13px}.tab.active{background:linear-gradient(135deg,var(--accent),var(--accent2));color:white;border-color:transparent}
+    .layout{display:grid;gap:16px;grid-template-columns:1fr}@media(min-width:960px){.layout{grid-template-columns:330px 1fr}}
+    .side{display:grid;gap:16px;align-content:start}.main{display:grid;gap:16px}.section{display:none}.section.active{display:grid;gap:16px}.device-card{display:grid;gap:10px}.device-line{display:flex;gap:10px;align-items:end}.device-line label{flex:1}.summary{display:grid;grid-template-columns:repeat(2,1fr);gap:10px}.summary .mini{background:#0a1730;border:1px solid rgba(117,151,212,.2);border-radius:18px;padding:14px}.big{font-size:28px;font-weight:900}
+    .account-list{display:grid;gap:12px}.account-card{position:relative;overflow:hidden;border:1px solid rgba(117,151,212,.26);background:linear-gradient(135deg,#132849,#0c1831);border-radius:22px;padding:17px;display:grid;gap:12px}.account-card.selected{border-color:#77a2ff;box-shadow:0 0 0 4px rgba(91,140,255,.12)}.account-card:after{content:"";position:absolute;right:-45px;top:-45px;width:130px;height:130px;border-radius:999px;background:rgba(91,140,255,.12)}.account-top{position:relative;display:flex;justify-content:space-between;gap:12px}.account-name{font-size:19px;font-weight:800}.balance{font-size:34px;font-weight:900;letter-spacing:-.03em}.account-actions{display:flex;gap:8px;flex-wrap:wrap}.tiny-id{font-family:ui-monospace,SFMono-Regular,Menlo,monospace;font-size:11px;color:#7f95bd;word-break:break-all}
+    .empty{border:1px dashed rgba(159,180,216,.32);background:rgba(8,18,38,.54);border-radius:22px;padding:22px;text-align:center}.empty .icon{font-size:36px;margin-bottom:8px}
+    .action-grid{display:grid;gap:12px;grid-template-columns:1fr}@media(min-width:760px){.action-grid{grid-template-columns:1fr 1fr}}
+    .action{border:1px solid rgba(117,151,212,.25);background:#0a1730;border-radius:22px;padding:18px;display:grid;gap:11px}.action-title{font-size:18px;font-weight:800}.bonus{display:inline-flex;width:max-content;border-radius:999px;padding:5px 9px;background:rgba(50,213,131,.12);color:var(--good);font-weight:800;font-size:13px}
+    table{width:100%;border-collapse:collapse;overflow:hidden;border-radius:16px}th,td{border-bottom:1px solid rgba(117,151,212,.18);padding:11px 10px;text-align:left;font-size:13px}th{color:#c8d8f8;background:#1a3159}td{color:#eaf1ff}.table-wrap{overflow:auto;border:1px solid rgba(117,151,212,.18);border-radius:16px}.kpis{display:grid;grid-template-columns:repeat(2,1fr);gap:10px}@media(min-width:760px){.kpis{grid-template-columns:repeat(5,1fr)}}.kpi{background:#0a1730;border:1px solid rgba(117,151,212,.2);border-radius:18px;padding:14px}.kpi b{display:block;font-size:22px;margin-top:6px}
+    .toast{position:fixed;right:18px;bottom:18px;z-index:30;display:grid;gap:8px}.toast-item{border:1px solid rgba(117,151,212,.32);background:#0d1b34;color:var(--text);border-radius:16px;padding:12px 14px;box-shadow:var(--shadow);max-width:360px}.toast-item.ok{border-color:rgba(50,213,131,.45)}.toast-item.err{border-color:rgba(255,107,107,.5)}
+  </style>
+</head>
+<body>
+  <div class="wrap">
+    <header class="hero">
+      <div class="hero-top">
+        <div class="brand">
+          <div class="logo">🎰</div>
+          <div>
+            <h1>Личный кабинет</h1>
+            <p class="lead">Аккаунты платы, баланс, пополнение и статистика — без ручного ввода технических идентификаторов.</p>
+          </div>
+        </div>
+        <div class="top-actions">
+          <span id="connectionPill" class="pill">● Готов к подключению</span>
+          <button id="logoutBtn" class="btn ghost hidden">Выйти</button>
+        </div>
+      </div>
+    </header>
+
+    <main id="guestView" class="grid auth-grid">
+      <section class="card">
+        <h2>Создать пользователя</h2>
+        <p class="muted small">Укажи логин, пароль и ID платы. После регистрации первый игровой аккаунт будет создан автоматически.</p>
+        <div class="form">
+          <div class="row two">
+            <label>Логин<input id="regUsername" autocomplete="username" placeholder="логин"></label>
+            <label>Пароль<input id="regPassword" type="password" autocomplete="new-password" placeholder="минимум любой пароль"></label>
+          </div>
+          <div class="row two">
+            <label>Имя в игре<input id="regDisplay" placeholder="что показывать на плате"></label>
+            <label>ID платы<input id="regDevice" placeholder="формат: ******-******"></label>
+          </div>
+          <button class="btn primary" id="regBtn">Создать и войти</button>
+          <div id="regStatus" class="status muted"></div>
+        </div>
+      </section>
+
+      <section class="card">
+        <h2>Войти</h2>
+        <p class="muted small">После входа панель сама загрузит аккаунты выбранной платы.</p>
+        <div class="form">
+          <div class="row two">
+            <label>Логин<input id="loginUsername" autocomplete="username" placeholder="username"></label>
+            <label>Пароль<input id="loginPassword" type="password" autocomplete="current-password" placeholder="password"></label>
+          </div>
+          <label>ID платы<input id="loginDevice" placeholder="формат: ******-******"></label>
+          <button class="btn primary" id="loginBtn">Войти в кабинет</button>
+          <div id="loginStatus" class="status muted"></div>
+        </div>
+      </section>
+    </main>
+
+    <main id="dashboard" class="hidden">
+      <div class="dash-head">
+        <div class="user-chip">
+          <div id="avatar" class="avatar">U</div>
+          <div><div id="hello" style="font-size:22px;font-weight:900;">Привет</div><div id="deviceHint" class="muted small"></div></div>
+        </div>
+        <nav class="tabs">
+          <button class="tab active" data-tab="overview">Обзор</button>
+          <button class="tab" data-tab="topup">Пополнение</button>
+          <button class="tab" data-tab="stats">Статистика</button>
+          <button class="tab" data-tab="settings">Плата</button>
+        </nav>
+      </div>
+
+      <div class="layout">
+        <aside class="side">
+          <section class="card device-card">
+            <h3>Текущая плата</h3>
+            <div class="device-line">
+              <label>ID платы<input id="activeDevice" placeholder="******-******"></label>
+              <button class="btn" id="changeDeviceBtn">Загрузить</button>
+            </div>
+            <div class="muted small">Это единственный идентификатор, который вводится вручную. Аккаунты подтягиваются с backend, технический Account ID скрыт в интерфейсе.</div>
+          </section>
+
+          <section class="card">
+            <h3>Сводка</h3>
+            <div class="summary">
+              <div class="mini"><div class="muted small">Аккаунтов</div><div id="summaryAccounts" class="big">0</div></div>
+              <div class="mini"><div class="muted small">Баланс</div><div id="summaryBalance" class="big">0</div></div>
+            </div>
+          </section>
+
+          <section class="card">
+            <h3>Новый игровой аккаунт</h3>
+            <div class="form">
+              <label>Название аккаунта<input id="newDisplayName" placeholder="название аккаунта"></label>
+              <button class="btn primary" id="createAccountBtn">Создать на этой плате</button>
+              <div id="createStatus" class="status muted"></div>
+            </div>
+          </section>
+        </aside>
+
+        <section class="main">
+          <section class="section active" data-section="overview">
+            <div class="card">
+              <h2>Аккаунты на плате</h2>
+              <p class="muted small">Список загружается с backend по ID платы, поэтому здесь видны и аккаунты, созданные автоматически при подключении устройства.</p>
+              <div id="accountsList" class="account-list"></div>
+            </div>
+          </section>
+
+          <section class="section" data-section="topup">
+            <div class="card">
+              <h2>Пополнение</h2>
+              <p id="selectedForTopup" class="muted small"></p>
+              <div class="action-grid">
+                <div class="action">
+                  <span class="bonus">+1000</span>
+                  <div class="action-title">Депнуть жильё</div>
+                  <label>Адрес<input id="housingAddress" placeholder="ул. Пушкина"></label>
+                  <button class="btn primary" id="topupHousingBtn">Пополнить</button>
+                </div>
+                <div class="action">
+                  <span class="bonus">+500</span>
+                  <div class="action-title">Депнуть макбук</div>
+                  <label>Версия<input id="macVersion" placeholder="MacBook Pro M3"></label>
+                  <button class="btn primary" id="topupMacBtn">Пополнить</button>
+                </div>
+              </div>
+              <div id="topupStatus" class="status muted" style="margin-top:10px"></div>
+            </div>
+          </section>
+
+          <section class="section" data-section="stats">
+            <div class="card">
+              <div style="display:flex;justify-content:space-between;gap:12px;flex-wrap:wrap;align-items:center">
+                <div><h2>Статистика</h2><p id="selectedForStats" class="muted small"></p></div>
+                <button class="btn primary" id="loadStatsBtn">Обновить статистику</button>
+              </div>
+              <div id="statsSummary" class="kpis" style="margin:12px 0"></div>
+              <div class="table-wrap"><table><thead><tr><th>Время</th><th>Режим</th><th>Ставка</th><th>x</th><th>Выигрыш</th><th>Баланс</th></tr></thead><tbody id="statsSpinsBody"></tbody></table></div>
+            </div>
+          </section>
+
+          <section class="section" data-section="settings">
+            <div class="card">
+              <h2>Настройки платы</h2>
+              <p class="muted">Здесь можно сменить активную плату. После смены кабинет перезагрузит список аккаунтов именно для неё.</p>
+              <div class="row two">
+                <label>ID платы<input id="settingsDevice" placeholder="******-******"></label>
+                <div style="display:flex;align-items:end"><button class="btn primary" id="settingsApplyDevice">Применить</button></div>
+              </div>
+              <div id="settingsStatus" class="status muted"></div>
+            </div>
+          </section>
+        </section>
+      </div>
+    </main>
+  </div>
+  <div id="toast" class="toast"></div>
+
+  <script>
+    const S={token:localStorage.getItem("userToken")||"",username:localStorage.getItem("username")||"",deviceId:localStorage.getItem("deviceId")||"",accounts:[],selectedAccountId:localStorage.getItem("selectedAccountId")||""};
+    const $=(id)=>document.getElementById(id); const dt=(u)=>u?new Date(u*1000).toLocaleString("ru-RU"):"";
+    function toast(msg,ok=true){const box=$("toast");const e=document.createElement("div");e.className=`toast-item ${ok?"ok":"err"}`;e.textContent=msg;box.appendChild(e);setTimeout(()=>e.remove(),3600)}
+    function setText(id,msg,ok=true){const e=$(id);e.textContent=msg||"";e.className=`status ${ok?"ok":"err"}`}
+    async function api(path,method="GET",body=null,token=null){const headers={"Content-Type":"application/json"};if(token)headers.Authorization=`Bearer ${token}`;const r=await fetch(path,{method,headers,body:body?JSON.stringify(body):null});const d=await r.json().catch(()=>({}));if(!r.ok)throw new Error(d.message||d.error||`${r.status}`);return d}
+    function save(){localStorage.setItem("userToken",S.token||"");localStorage.setItem("username",S.username||"");localStorage.setItem("deviceId",S.deviceId||"");localStorage.setItem("selectedAccountId",S.selectedAccountId||"")}
+    function selectedAccount(){return S.accounts.find(a=>a.accountId===S.selectedAccountId)||S.accounts[0]||null}
+    function money(v){return Number(v||0).toLocaleString("ru-RU")}
+    function requireSelected(){const a=selectedAccount();if(!a)throw new Error("Сначала создай или выбери игровой аккаунт");S.selectedAccountId=a.accountId;save();return a}
+    function switchTab(name){document.querySelectorAll(".tab").forEach(b=>b.classList.toggle("active",b.dataset.tab===name));document.querySelectorAll(".section").forEach(s=>s.classList.toggle("active",s.dataset.section===name));if(name==="stats") loadStats().catch(e=>toast(e.message,false))}
+    function showDashboard(){ $("guestView").classList.add("hidden"); $("dashboard").classList.remove("hidden"); $("logoutBtn").classList.remove("hidden"); $("hello").textContent=`Привет, ${S.username||"игрок"}`; $("avatar").textContent=(S.username||"U").slice(0,1).toUpperCase(); ["activeDevice","settingsDevice"].forEach(id=>$(id).value=S.deviceId||""); updateHeader(); }
+    function showGuest(){ $("guestView").classList.remove("hidden"); $("dashboard").classList.add("hidden"); $("logoutBtn").classList.add("hidden"); $("loginDevice").value=S.deviceId||""; $("regDevice").value=S.deviceId||""; }
+    function updateHeader(){ $("deviceHint").textContent=S.deviceId?`Плата: ${S.deviceId}`:"Плата не выбрана"; $("connectionPill").textContent=S.token?"● Вход выполнен":"● Готов к подключению"; }
+    function renderAccounts(){
+      const root=$("accountsList"); const total=S.accounts.reduce((sum,a)=>sum+Number(a.balance||0),0); $("summaryAccounts").textContent=S.accounts.length; $("summaryBalance").textContent=money(total);
+      if(!S.accounts.length){root.innerHTML=`<div class="empty"><div class="icon">🕹️</div><h3>На этой плате пока нет аккаунтов</h3><p class="muted">Создай первый игровой аккаунт в левой панели. После этого можно будет пополнять баланс и смотреть статистику.</p></div>`; updateSelectedText(); return;}
+      if(!S.accounts.some(a=>a.accountId===S.selectedAccountId)) S.selectedAccountId=S.accounts[0].accountId; save();
+      root.innerHTML=S.accounts.map(a=>`<article class="account-card ${a.accountId===S.selectedAccountId?"selected":""}" data-account="${a.accountId}">
+        <div class="account-top"><div><div class="account-name">${escapeHtml(a.displayName||"Player")}</div><div class="muted small">Плата ${escapeHtml(S.deviceId)}</div></div><div class="pill">${a.accountId===S.selectedAccountId?"Выбран":"Аккаунт"}</div></div>
+        <div><div class="muted small">Баланс</div><div class="balance">${money(a.balance)}</div></div>
+        <div class="account-actions"><button class="btn primary" data-act="select" data-id="${a.accountId}">Выбрать</button><button class="btn" data-act="topup" data-id="${a.accountId}">Пополнить</button><button class="btn" data-act="stats" data-id="${a.accountId}">Статистика</button></div>
+        <details><summary class="muted small">Технический ID</summary><div class="tiny-id">${a.accountId}</div></details>
+      </article>`).join("");
+      root.querySelectorAll("button[data-act]").forEach(b=>b.addEventListener("click",()=>{S.selectedAccountId=b.dataset.id;save();renderAccounts(); if(b.dataset.act==="topup")switchTab("topup"); if(b.dataset.act==="stats")switchTab("stats");}));
+      root.querySelectorAll(".account-card").forEach(c=>c.addEventListener("click",e=>{if(e.target.tagName==="BUTTON"||e.target.tagName==="SUMMARY")return;S.selectedAccountId=c.dataset.account;save();renderAccounts();}));
+      updateSelectedText();
+    }
+    function updateSelectedText(){const a=selectedAccount(); const text=a?`Выбран: ${a.displayName} · баланс ${money(a.balance)} · плата ${S.deviceId}`:"Аккаунт не выбран"; $("selectedForTopup").textContent=text; $("selectedForStats").textContent=text;}
+    async function loadAccounts(){ if(!S.deviceId) throw new Error("Укажи ID платы"); $("activeDevice").value=S.deviceId; $("settingsDevice").value=S.deviceId; const d=await api(`/api/v1/devices/${encodeURIComponent(S.deviceId)}/accounts`,"GET",null,null); S.accounts=d.accounts||[]; if(!S.accounts.some(a=>a.accountId===S.selectedAccountId)) S.selectedAccountId=S.accounts[0]?.accountId||""; save(); renderAccounts(); updateHeader(); }
+    function escapeHtml(s){return String(s).replace(/[&<>'"]/g,m=>({"&":"&amp;","<":"&lt;",">":"&gt;","'":"&#39;",'"':"&quot;"}[m]))}
+    async function login(username,password,deviceId){ const d=await api("/api/v1/backend/users/portal/login","POST",{username,password}); S.token=d.token; S.username=username.trim(); S.deviceId=deviceId.trim(); save(); showDashboard(); await loadAccounts(); toast("Вход выполнен") }
+
+    $("regBtn").addEventListener("click",async()=>{try{const username=$("regUsername").value.trim(), password=$("regPassword").value, display=$("regDisplay").value.trim()||username, deviceId=$("regDevice").value.trim(); if(!deviceId)throw new Error("Укажи ID платы"); await api("/api/v1/backend/users/register","POST",{username,password,displayName:display,deviceId,initialBalance:0}); setText("regStatus","Пользователь создан, выполняю вход…"); await login(username,password,deviceId)}catch(e){setText("regStatus",e.message,false)}});
+    $("loginBtn").addEventListener("click",async()=>{try{await login($("loginUsername").value.trim(),$("loginPassword").value,$("loginDevice").value.trim())}catch(e){setText("loginStatus",e.message,false)}});
+    $("logoutBtn").addEventListener("click",()=>{S.token="";S.username="";S.accounts=[];S.selectedAccountId="";localStorage.removeItem("userToken");localStorage.removeItem("username");localStorage.removeItem("selectedAccountId");showGuest();toast("Вы вышли")});
+    document.querySelectorAll(".tab").forEach(b=>b.addEventListener("click",()=>switchTab(b.dataset.tab)));
+    async function applyDevice(id,statusId){try{S.deviceId=id.trim(); if(!S.deviceId)throw new Error("Укажи ID платы"); save(); await loadAccounts(); if(statusId)setText(statusId,"Плата загружена, список аккаунтов обновлён"); toast("Аккаунты платы загружены с backend")}catch(e){if(statusId)setText(statusId,e.message,false); else toast(e.message,false)}}
+    $("changeDeviceBtn").addEventListener("click",()=>applyDevice($("activeDevice").value));
+    $("settingsApplyDevice").addEventListener("click",()=>applyDevice($("settingsDevice").value,"settingsStatus"));
+    $("createAccountBtn").addEventListener("click",async()=>{try{if(!S.deviceId)throw new Error("Сначала укажи ID платы"); const display=$("newDisplayName").value.trim()||"Player"; const d=await api("/api/v1/backend/users/accounts","POST",{deviceId:S.deviceId,displayName:display,initialBalance:0},S.token); S.selectedAccountId=d.accountId; await loadAccounts(); setText("createStatus","Игровой аккаунт создан"); toast("Аккаунт создан")}catch(e){setText("createStatus",e.message,false)}});
+    async function topup(type){try{const a=requireSelected(); const body={deviceId:S.deviceId,accountId:a.accountId,type}; if(type==="housing")body.address=$("housingAddress").value; if(type==="macbook")body.version=$("macVersion").value; const d=await api("/api/v1/backend/users/topup","POST",body,S.token); setText("topupStatus",`Готово: +${d.bonus}, новый баланс ${money(d.balance)}`); await loadAccounts(); toast("Баланс пополнен")}catch(e){setText("topupStatus",e.message,false)}}
+    $("topupHousingBtn").addEventListener("click",()=>topup("housing")); $("topupMacBtn").addEventListener("click",()=>topup("macbook"));
+    async function loadStats(){const a=requireSelected(); const d=await api(`/api/v1/backend/users/stats/${encodeURIComponent(S.deviceId)}/${encodeURIComponent(a.accountId)}`,"GET",null,S.token); $("statsSummary").innerHTML=`<div class="kpi"><span class="muted small">Баланс</span><b>${money(d.balance)}</b></div><div class="kpi"><span class="muted small">Спинов</span><b>${d.stats.spins}</b></div><div class="kpi"><span class="muted small">Побед</span><b>${d.stats.wins}</b></div><div class="kpi"><span class="muted small">WinRate</span><b>${Math.round((d.stats.winRate||0)*100)}%</b></div><div class="kpi"><span class="muted small">Payout</span><b>${money(d.stats.totalPayout)}</b></div>`; $("statsSpinsBody").innerHTML=(d.recentSpins||[]).map(s=>`<tr><td>${dt(s.created_at)}</td><td>${s.mode}</td><td>${s.bet}</td><td>${s.payout_multiplier}</td><td>${s.payout}</td><td>${s.balance_after}</td></tr>`).join("")||`<tr><td colspan="6" class="muted">Истории пока нет</td></tr>`; updateSelectedText();}
+    $("loadStatsBtn").addEventListener("click",()=>loadStats().catch(e=>toast(e.message,false)));
+    ["loginDevice","regDevice"].forEach(id=>$(id).value=S.deviceId||"");
+    if(S.token){showDashboard();loadAccounts().catch(e=>{toast(e.message,false);renderAccounts();});}else showGuest();
+  </script>
+</body>
+</html>
